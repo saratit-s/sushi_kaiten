@@ -1,0 +1,1437 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>เชฟซูชิสายพาน</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mitr:wght@400;500;600&family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap">
+<style>
+/* Layout: one-screen game. HUD, square wooden counter (belt ring around the chef), sushi columns below; on wide screens HUD + columns move to a side panel. */
+:root{
+  --noren:#1c2540;
+  --noren-deep:#121830;
+  --panel:#273152;
+  --hinoki:#efd6aa;
+  --hinoki-shade:#c9a46e;
+  --ink:#f4ede0;
+  --ink-dim:#a9b2c9;
+  --soy:#2a1d14;
+  --shu:#e0532f;
+  --matcha:#86b86f;
+  --f-display:"Mitr","Noto Sans Thai","Leelawadee UI",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai","Noto Sans Thai","Leelawadee UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+[hidden]{display:none !important}
+body{
+  margin:0;background:var(--noren);color:var(--ink);font-family:var(--f-body);
+  overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  background-image:radial-gradient(120% 80% at 50% 0%, #26315a 0%, var(--noren) 55%, var(--noren-deep) 100%);
+}
+#app{
+  box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+#side{display:contents}
+#hud{order:0}
+#board{order:1}
+#nextq{order:2}
+#spare{order:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--ink-dim)}
+#spareItems{display:flex;flex-wrap:wrap;gap:6px}
+.sp{width:40px;height:40px;border-radius:12px;border:2px solid #ffd54a;background:rgba(255,213,74,.12);padding:0;display:grid;place-items:center;cursor:pointer;touch-action:manipulation}
+.sp canvas{width:32px;height:32px}
+.sp.armed{background:#a5462c;border-color:var(--shu)}
+#btnHint.nudge{background:#ffd54a;color:var(--soy);border-color:#ffd54a;animation:pulse .5s infinite alternate}
+#tray{order:3}
+#app.wide{flex-direction:row;gap:22px}
+#app.wide #side{display:flex;flex-direction:column;gap:16px;width:320px;order:1}
+#app.wide #board{order:0}
+#app.wide #hud,#app.wide #tray,#app.wide #nextq,#app.wide #spare{width:100% !important}
+
+#nextq{display:flex;align-items:center;gap:10px;box-sizing:border-box;font-size:12px;color:var(--ink-dim);min-height:30px}
+#nqItems{display:flex;gap:8px;flex-wrap:wrap}
+.nq{display:flex;align-items:center;gap:3px;background:rgba(255,255,255,.08);border-radius:999px;padding:2px 9px 2px 3px;color:var(--ink);font-family:var(--f-display);font-size:13px;font-variant-numeric:tabular-nums}
+.nq canvas{width:24px;height:24px}
+.nq.first{background:rgba(255,255,255,.16)}
+#hud{display:flex;align-items:center;gap:10px 16px;flex-wrap:wrap;box-sizing:border-box}
+.stat{display:flex;flex-direction:column;line-height:1.1}
+.lbl{font-size:12px;letter-spacing:.04em;color:var(--ink-dim)}
+.val{font-family:var(--f-display);font-weight:600;font-size:24px;font-variant-numeric:tabular-nums}
+.val.bad{color:#ff8a6b}
+.meter{flex:1;min-width:150px;display:flex;flex-direction:column;gap:5px}
+.meter .lbl b{font-family:var(--f-display);font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums;margin-left:4px}
+.bar{height:10px;border-radius:6px;background:rgba(255,255,255,.1);overflow:hidden}
+.bar{position:relative}
+.bar s{position:absolute;top:-2px;bottom:-2px;width:2px;background:#ffd54a;border-radius:1px;left:0}
+.meter .goal{font-size:11.5px;color:var(--ink-soft,#c9c2b4);line-height:1.2}
+.meter .goal b{color:#ffd54a;font-weight:600;letter-spacing:1px}
+.bar i{display:block;height:100%;width:0;background:var(--matcha);border-radius:6px;transition:width .2s,background-color .2s}
+.meter.warn .bar i{background:#e9b23f}
+.meter.danger .bar i{background:var(--shu);animation:pulse .6s infinite alternate}
+@keyframes pulse{to{opacity:.55}}
+.icons{display:flex;gap:8px}
+.icon{width:40px;height:40px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:var(--panel);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.icon svg{width:20px;height:20px}
+#btnFast{position:relative;width:auto;padding:0 10px;display:flex;gap:4px;font-family:var(--f-display);font-size:13px}
+#btnFast .fx{display:none}
+#btnHint{position:relative;width:auto;padding:0 10px;display:flex;gap:3px;align-items:center;font-family:var(--f-display);font-size:13px}
+#btnHint .hc:empty{display:none}
+.lane.hint{border-color:#ffd54a;box-shadow:0 0 0 3px #ffd54a,0 0 22px 4px rgba(255,213,74,.75);animation:hintGlow .7s infinite alternate}
+@keyframes hintGlow{from{box-shadow:0 0 0 3px #ffd54a,0 0 10px 2px rgba(255,213,74,.5)}to{box-shadow:0 0 0 3px #ffd54a,0 0 26px 6px rgba(255,213,74,.9)}}
+#btnFast[aria-pressed="true"]{background:#e9b23f;color:var(--soy);border-color:#e9b23f}
+#btnFast[aria-pressed="true"] .fx{display:inline}
+.icon:focus-visible,.lane:focus-visible,.btn:focus-visible,.chip:focus-visible{outline:3px solid #ffd27a;outline-offset:2px}
+
+#board{position:relative;border-radius:20px;box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 0 3px rgba(0,0,0,.25);overflow:hidden;flex:none;background:var(--hinoki)}
+#cv{display:block;width:100%;height:100%;touch-action:none}
+#toast{position:absolute;left:50%;top:22%;transform:translate(-50%,0);background:var(--soy);color:#ffe9c4;font-family:var(--f-display);font-weight:500;
+  padding:8px 16px;border-radius:999px;font-size:15px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s}
+#toast.show{opacity:1;transform:translate(-50%,-6px)}
+
+#tray{display:grid;grid-template-columns:repeat(var(--cols,5),minmax(0,1fr));gap:5px;box-sizing:border-box;padding:6px;border-radius:16px;
+  background:#6b4527;box-shadow:inset 0 4px 10px rgba(0,0,0,.35)}
+.lane{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px;border-radius:12px;
+  border:2px solid transparent;background:#8a5c36;color:#ffe9c4;cursor:pointer;touch-action:manipulation;font-family:var(--f-body);
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);transition:transform .08s,border-color .15s}
+.lane canvas{width:100%;max-width:96px;height:auto;aspect-ratio:80/234}
+.lane .left{font-size:11.5px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.lane .key{position:absolute;left:5px;top:3px;font-family:var(--f-display);font-size:10px;color:rgba(255,233,196,.5)}
+.lane.risk{border-color:var(--shu)}
+.lane.risk .left{color:#ffb39d}
+.lane.armed{background:#a5462c;animation:pulse .5s infinite alternate}
+.lane:active,.lane.hit{transform:translateY(2px) scale(.97)}
+.lane.shake{animation:shake .25s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.lane:disabled{opacity:.35;cursor:default}
+@media (hover:none){.lane .key{display:none}}
+
+#ovBoard{z-index:20}
+.overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;overflow:auto;
+  background:rgba(12,16,32,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);
+  padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+.card{width:100%;max-width:440px;background:var(--hinoki);color:var(--soy);border-radius:22px;padding:22px 22px 20px;box-sizing:border-box;
+  box-shadow:0 20px 60px rgba(0,0,0,.5),inset 0 -6px 0 var(--hinoki-shade);margin:auto}
+.eyebrow{font-size:12px;letter-spacing:.3em;color:#9a6b3a;margin:0}
+.card h1,.card h2{font-family:var(--f-display);font-weight:600;margin:2px 0 10px;line-height:1.15;text-wrap:balance}
+.card h1{font-size:34px}
+.card h2{font-size:28px}
+.card ol{margin:0 0 14px;padding-left:20px;font-size:14.5px;line-height:1.55}
+.card ol li+li{margin-top:3px}
+.card p{margin:0 0 12px;font-size:14.5px;line-height:1.5}
+.limitLbl{font-size:13px;font-weight:600;margin-bottom:6px}
+.levels{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-bottom:10px}
+.lv{aspect-ratio:1;max-width:100%;border:2px solid rgba(42,29,20,.16);background:rgba(255,255,255,.45);border-radius:12px;color:var(--soy);cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;padding:0;font-family:var(--f-display);font-size:20px;font-weight:600;line-height:1.1}
+.lv small{font-size:11px;letter-spacing:1px;color:#c98a14;font-weight:500}
+.lv small i{font-style:normal;color:rgba(42,29,20,.18)}
+.lv.cur{border-color:var(--soy);background:var(--soy);color:#ffe9c4}
+.lv.cur small i{color:rgba(255,233,196,.25)}
+.lv:disabled{opacity:.4;cursor:default}
+.lv:disabled small{color:rgba(42,29,20,.6);letter-spacing:0}
+.lv:focus-visible{outline:3px solid #ffd27a;outline-offset:2px}
+.lvInfo{font-size:13px !important;color:#7a5530;min-height:2.6em}
+.starsBig{text-align:center;font-size:44px;letter-spacing:8px;line-height:1;margin:4px 0 6px;color:rgba(42,29,20,.15)}
+.starsBig .on{color:#e0a516;text-shadow:0 2px 0 #a8730a}
+.rNote{text-align:center;font-size:14px;color:#7a5530}
+.nameRow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:600}
+.nameRow input{flex:1;min-width:0;border:2px solid rgba(42,29,20,.2);border-radius:10px;padding:8px 10px;font:inherit;font-weight:500;background:rgba(255,255,255,.6);color:var(--soy)}
+.nameRow input:focus-visible{outline:3px solid #ffd27a;outline-offset:1px}
+.card .board{list-style:none;margin:0 0 10px;padding:0;max-height:min(50vh,360px);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.board li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.4);font-size:14px}
+.board li.me{background:var(--soy);color:#ffe9c4}
+.board li.empty{display:block;text-align:center;color:#7a5530}
+.board .rk{font-family:var(--f-display);font-weight:600;text-align:center}
+.board .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board .lvl,.board .sc{font-variant-numeric:tabular-nums;font-family:var(--f-display)}
+.adbox{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:150px;margin:6px 0 12px;border-radius:14px;
+  border:2px dashed rgba(42,29,20,.3);background:rgba(255,255,255,.35);font-family:var(--f-display);font-size:20px;text-align:center;padding:12px}
+.adbox small{font-family:var(--f-body);font-size:12.5px;color:#7a5530}
+.btn + .btn{margin-top:8px}
+.chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.chip{flex:1;min-width:88px;border:2px solid rgba(42,29,20,.18);background:rgba(255,255,255,.4);color:var(--soy);border-radius:12px;padding:7px 6px;cursor:pointer;font-family:var(--f-body);text-align:center}
+.chip b{display:block;font-family:var(--f-display);font-size:18px;font-weight:600}
+.chip span{font-size:12px}
+.chip[aria-pressed="true"]{border-color:var(--soy);background:var(--soy);color:#ffe9c4}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-family:var(--f-display);font-size:19px;font-weight:500;cursor:pointer;
+  background:var(--shu);color:#fff;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--soy);box-shadow:none;border:2px solid rgba(42,29,20,.25);font-size:16px;padding:10px;margin-top:8px}
+.best{font-size:13px;text-align:center;margin-top:10px;color:#7a5530}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 16px}
+.stats div{background:rgba(255,255,255,.45);border-radius:12px;padding:8px 10px}
+.stats span{display:block;font-size:12px;color:#7a5530}
+.stats b{font-family:var(--f-display);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.stats .wide{grid-column:1/-1}
+.newbest{color:var(--shu);font-weight:600}
+@media (prefers-reduced-motion:reduce){.meter.danger .bar i,.lane.armed,.lane.hint{animation:none}}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="side">
+    <div id="hud">
+      <div class="stat"><span class="lbl">ด่าน</span><span class="val" id="level">1</span></div>
+      <div class="stat"><span class="lbl">เสิร์ฟแล้ว</span><span class="val" id="served">0 / 30</span></div>
+      <div class="stat"><span class="lbl">คะแนน</span><span class="val" id="score">0</span></div>
+      <div class="meter" id="meter"><div class="lbl">ซูชิค้างไม่มีคนรอ<b id="beltTxt">0 / 6</b></div><div class="bar"><i id="beltFill"></i></div><div class="goal" id="starGoal"></div></div>
+      <div class="icons">
+        <button class="icon" id="btnSound" aria-label="ปิดเสียง"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="sndWave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path id="sndOff" d="M16 9l6 6M22 9l-6 6" hidden/></svg></button>
+        <button class="icon" id="btnFast" aria-label="เร่งสายพาน" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6l8 6-8 6zM12 6l8 6-8 6z"/></svg><span class="fx">×2</span></button>
+        <button class="icon" id="btnHint" aria-label="ตัวช่วย: เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>ช่วย<span class="hc"></span></button>
+        <button class="icon" id="btnPause" aria-label="พักเกม"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
+      </div>
+    </div>
+    <div id="nextq" aria-live="polite"><span class="nqlbl">คิวถัดไป</span><span id="nqItems"></span></div>
+    <div id="spare" hidden><span class="nqlbl">เชฟเก็บไว้ แตะเพื่อส่ง</span><span id="spareItems"></span></div>
+    <div id="tray"></div>
+  </div>
+  <div id="board"><canvas id="cv"></canvas><div id="toast"></div></div>
+</div>
+
+<div class="overlay" id="ovStart">
+  <div class="card">
+    <p class="eyebrow">回転寿司 · KAITEN</p>
+    <h1>เชฟซูชิสายพาน</h1>
+    <ol>
+      <li>ซูชิเรียงเป็นแถวอยู่ด้านล่าง แตะแถวไหน เชฟจะทำชิ้นบนสุดของแถวนั้น 1 ชิ้นลงสายพาน (บน PC กด 1–5)</li>
+      <li>ปุ่ม ▶▶ บนขวาเร่งสายพาน ×2 กดอีกครั้งเพื่อกลับความเร็วปกติ (บน PC กด F)</li>
+      <li>สายพานวนตามเข็มนาฬิกา ลูกค้าแต่ละคนกินซูชิแค่แบบเดียว และหยิบเมื่อชิ้นที่ตรงกันผ่านหน้า</li>
+      <li>ส่งครบตามจำนวน ลูกค้าจะลุกไป แล้วคนถัดไปในคิวจะมานั่งแทน (ดูคิวได้เหนือแถวซูชิ)</li>
+      <li>ดูป้ายของลูกค้าที่นั่งอยู่และคิวถัดไปเอง ชิ้นที่ยังไม่มีใครรอจะวนค้างบนสายพาน ทุกด่านมีทางผ่าน แต่ต้องคิดว่าจะขุดแถวไหนก่อน</li>
+      <li>เสิร์ฟครบทุกชิ้น = ผ่านด่าน ซูชิที่ยังไม่มีลูกค้าคนไหนรอค้างบนสายพานจนเต็มหลอด = ไม่ผ่าน ชิ้นที่กำลังวิ่งไปหาลูกค้าไม่นับ แตะเร็วได้เต็มที่</li>
+      <li>ผ่านด่านโดยไม่ใช้ตัวช่วย = 3 ดาวเสมอ</li>
+      <li>ปุ่ม 💡 ช่วย (คีย์ H): เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน ไว้ให้แตะส่งใหม่ทีหลัง ใช้ 1 ครั้ง ได้ 2 ดาว ใช้มากกว่านั้น ได้ 1 ดาว (ดูโฆษณาเล่นต่อนับเป็นตัวช่วยด้วย)</li>
+    </ol>
+    <div class="limitLbl">เลือกด่าน (ด่านไม่มีวันหมด ผ่านแล้วเปิดด่านใหม่ต่อไปเรื่อยๆ)</div>
+    <div class="levels" id="levels"></div>
+    <p class="lvInfo" id="lvInfo"></p>
+    <button class="btn" id="btnStart">เริ่มด่าน 1</button>
+    <div class="nameRow"><label for="pname">ชื่อในตารางอันดับ</label><input id="pname" maxlength="16" placeholder="เชฟนิรนาม" autocomplete="nickname"></div>
+    <button class="btn ghost" id="btnBoard">ตารางอันดับ</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovBoard" hidden>
+  <div class="card">
+    <p class="eyebrow">LEADERBOARD</p>
+    <h2>ตารางอันดับ</h2>
+    <p class="rNote" id="bMode"></p>
+    <ol class="board" id="boardList"></ol>
+    <p class="rNote" id="bMe"></p>
+    <button class="btn" id="btnBoardClose">ปิด</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovAd" hidden>
+  <div class="card">
+    <p class="eyebrow">โฆษณา</p>
+    <div class="adbox">พื้นที่โฆษณา<small>ยังไม่ได้เชื่อมระบบโฆษณา ตัวอย่างนี้นับถอยหลังแทน</small></div>
+    <p class="rNote" id="adCount"></p>
+    <button class="btn" id="btnAdClaim" disabled>รับโอกาสเล่นต่อ</button>
+    <button class="btn ghost" id="btnAdSkip">ไม่ดู</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovPause" hidden>
+  <div class="card">
+    <h2>พักเบรก</h2>
+    <p>สายพานหยุดอยู่ กดเล่นต่อเมื่อพร้อม</p>
+    <button class="btn" id="btnResume">เล่นต่อ</button>
+    <button class="btn ghost" id="btnQuit">ออกไปหน้าแรก</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovIntro" hidden>
+  <div class="card">
+    <p class="eyebrow" id="iEyebrow">กติกาใหม่</p>
+    <h2 id="iTitle"></h2>
+    <p id="iText"></p>
+    <button class="btn" id="btnIntroGo">เข้าใจแล้ว เริ่มเลย</button>
+  </div>
+</div>
+
+<div class="overlay" id="ovResult" hidden>
+  <div class="card">
+    <p class="eyebrow" id="rEyebrow">ด่าน 1</p>
+    <h2 id="rTitle">ผ่านด่านแล้ว!</h2>
+    <div class="starsBig" id="rStars"></div>
+    <p class="rNote" id="rNote"></p>
+    <div class="stats">
+      <div class="wide"><span>คะแนน</span><b id="rScore">0</b> <span id="rBest"></span></div>
+      <div><span>ลูกค้าอิ่ม</span><b id="rServed">0</b></div>
+      <div><span>ซูชิที่เสิร์ฟ</span><b id="rSushi">0</b></div>
+    </div>
+    <button class="btn" id="btnNext">ด่านต่อไป</button>
+    <button class="btn" id="btnRevive" hidden>ดูโฆษณา เพื่อเล่นต่อจากตรงนี้</button>
+    <button class="btn" id="btnRetry">ลองอีกครั้ง</button>
+    <button class="btn ghost" id="btnLevels">เลือกด่าน</button>
+    <button class="btn ghost" id="btnBoard2">ตารางอันดับ</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const TAU = Math.PI * 2;
+// ---------- geometry (virtual 640×640 board) ----------
+const V = 640, BX0 = 156, BX1 = 484, R = 44, BW = 56;
+const S = BX1 - BX0 - 2 * R, A = Math.PI * R / 2, L = 4 * S + 4 * A;
+const DROP_S = 2 * S + 1.5 * A;      // bottom-right corner, next to the chef's pass
+const MIN_GAP = 38;                   // piece spacing on the belt
+const QUEUE_MAX = 8;
+
+function pathPos(s) {
+  s = ((s % L) + L) % L;
+  const lines = [[BX0 + R, BX0, 1, 0], [BX1, BX0 + R, 0, 1], [BX1 - R, BX1, -1, 0], [BX0, BX1 - R, 0, -1]];
+  const arcs = [[BX1 - R, BX0 + R, -Math.PI / 2], [BX1 - R, BX1 - R, 0], [BX0 + R, BX1 - R, Math.PI / 2], [BX0 + R, BX0 + R, Math.PI]];
+  for (let i = 0; i < 4; i++) {
+    if (s < S) { const l = lines[i]; return { x: l[0] + l[2] * s, y: l[1] + l[3] * s }; }
+    s -= S;
+    if (s < A) { const a = arcs[i], ang = a[2] + s / R; return { x: a[0] + Math.cos(ang) * R, y: a[1] + Math.sin(ang) * R }; }
+    s -= A;
+  }
+  return { x: BX0 + R, y: BX0 };
+}
+function tracePath(c) {
+  c.beginPath();
+  c.moveTo(BX0 + R, BX0); c.lineTo(BX1 - R, BX0);
+  c.arc(BX1 - R, BX0 + R, R, -Math.PI / 2, 0); c.lineTo(BX1, BX1 - R);
+  c.arc(BX1 - R, BX1 - R, R, 0, Math.PI / 2); c.lineTo(BX0 + R, BX1);
+  c.arc(BX0 + R, BX1 - R, R, Math.PI / 2, Math.PI); c.lineTo(BX0, BX0 + R);
+  c.arc(BX0 + R, BX0 + R, R, Math.PI, Math.PI * 1.5);
+  c.closePath();
+}
+function nearestS(x, y) {
+  let best = 0, bd = 1e9;
+  for (let s = 0; s < L; s += 0.5) { const p = pathPos(s), d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = s; } }
+  return best;
+}
+const sd = (a, b) => ((((a - b) % L) + L * 1.5) % L) - L / 2; // signed distance along the loop
+
+// ---------- seats: 3 per side, outside the belt ----------
+const SEATS = [];
+[210, 320, 430].forEach(x => SEATS.push({ side: 'T', fx: x, fy: 34, chx: x, chy: 86, bx: x, by: 108, ox: 0, oy: -1, px: x, py: BX0 }));
+[210, 320, 430].forEach(y => SEATS.push({ side: 'R', fx: 586, fy: y - 30, chx: 586, chy: y + 20, bx: 586, by: y + 42, ox: 1, oy: 0, px: BX1, py: y }));
+[430, 320, 210].forEach(x => SEATS.push({ side: 'B', fx: x, fy: 602, chx: x, chy: 554, bx: x, by: 532, ox: 0, oy: 1, px: x, py: BX1 }));
+[430, 320, 210].forEach(y => SEATS.push({ side: 'L', fx: 54, fy: y - 30, chx: 54, chy: y + 20, bx: 54, by: y + 42, ox: -1, oy: 0, px: BX0, py: y }));
+SEATS.forEach(st => st.s = nearestS(st.px, st.py));
+const SEAT_ORDER = [1, 7, 10, 4, 0, 8, 3, 9, 2, 6, 5, 11];
+
+// ---------- sushi ----------
+const TYPES = [
+  { id: 'salmon', name: 'แซลมอน', rim: '#f08a3c' },
+  { id: 'tuna', name: 'มากุโระ', rim: '#d33a4a' },
+  { id: 'tamago', name: 'ทามาโกะ', rim: '#d9ad2b' },
+  { id: 'ebi', name: 'เอบิ', rim: '#e46f9b' },
+  { id: 'maki', name: 'คัปปะมากิ', rim: '#4ea35a' },
+  { id: 'ikura', name: 'อิคุระ', rim: '#4d7fd6' },
+];
+function rice(c) {
+  c.fillStyle = '#fffdf7'; c.strokeStyle = 'rgba(120,100,70,.28)'; c.lineWidth = 1;
+  c.beginPath(); c.ellipse(0, 3.5, 14, 8.5, 0, 0, TAU); c.fill(); c.stroke();
+  c.fillStyle = 'rgba(190,178,155,.55)';
+  for (const [gx, gy] of [[-9, 7], [-3, 9.5], [4, 9], [9, 6], [0, 11]]) { c.beginPath(); c.ellipse(gx, gy, 1.7, 1, 0.4, 0, TAU); c.fill(); }
+}
+function toppingPath(c) { c.beginPath(); c.ellipse(0, -1.5, 16, 8.6, 0, 0, TAU); }
+function topping(c, col, deco) {
+  c.save(); c.rotate(-0.28);
+  toppingPath(c); c.fillStyle = col; c.fill();
+  c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 0.8; c.stroke();
+  if (deco) { c.save(); toppingPath(c); c.clip(); deco(c); c.restore(); }
+  c.restore();
+}
+const SUSHI = [
+  c => { rice(c); topping(c, '#ff7a2e', c => { c.strokeStyle = 'rgba(255,232,214,.9)'; c.lineWidth = 1.1; for (let i = -1; i <= 1; i++) { c.beginPath(); c.moveTo(i * 8 - 6, -12); c.quadraticCurveTo(i * 8 + 2, -2, i * 8 + 3, 10); c.stroke(); } }); },
+  c => { rice(c); topping(c, '#c62f45', c => { c.fillStyle = 'rgba(255,255,255,.22)'; c.beginPath(); c.ellipse(-4, -5.5, 8, 2.4, 0, 0, TAU); c.fill(); }); },
+  c => { rice(c); topping(c, '#f6cc48', c => { c.fillStyle = 'rgba(255,240,170,.6)'; c.beginPath(); c.ellipse(-3, -5, 10, 2.6, 0, 0, TAU); c.fill(); c.fillStyle = '#24302a'; c.fillRect(-3.8, -12, 7.6, 22); }); },
+  c => {
+    // ebi: pale butterflied shrimp with bold red bands and a big red tail fan
+    rice(c);
+    c.save(); c.rotate(-0.28);
+    c.fillStyle = '#e8321e';
+    c.beginPath(); c.moveTo(10, -3); c.quadraticCurveTo(21, -17, 27, -11); c.quadraticCurveTo(22, -4, 15, -1); c.closePath(); c.fill();
+    c.beginPath(); c.moveTo(10, 0); c.quadraticCurveTo(22, 11, 27, 5); c.quadraticCurveTo(21, 0, 15, -1); c.closePath(); c.fill();
+    c.beginPath(); c.ellipse(0, -1.5, 15, 7.4, 0, 0, TAU); c.fillStyle = '#fff3ec'; c.fill();
+    c.strokeStyle = 'rgba(0,0,0,.12)'; c.lineWidth = 0.8; c.stroke();
+    c.save(); c.clip();
+    c.fillStyle = '#ff5a3c';
+    for (const x of [-9, 0, 9]) { c.beginPath(); c.ellipse(x, -1.5, 2.8, 9, 0.12, 0, TAU); c.fill(); }
+    c.fillStyle = '#ffd3c4'; c.fillRect(-16, -2.2, 32, 1.4);
+    c.restore();
+    c.restore();
+  },
+  c => {
+    for (const x of [-7.5, 7.5]) {
+      c.fillStyle = '#1e2b24'; c.beginPath(); c.arc(x, 0, 9, 0, TAU); c.fill();
+      c.fillStyle = '#fffdf7'; c.beginPath(); c.arc(x, 0, 7.2, 0, TAU); c.fill();
+      c.fillStyle = '#6bbf4e'; c.beginPath(); c.arc(x, 0, 3.2, 0, TAU); c.fill();
+      c.fillStyle = '#c9e8b5'; c.beginPath(); c.arc(x - 0.8, -0.8, 1.1, 0, TAU); c.fill();
+    }
+  },
+  c => {
+    c.fillStyle = '#1e2b24'; c.beginPath(); c.arc(0, 0, 13.5, 0, TAU); c.fill();
+    c.fillStyle = '#c94612'; c.beginPath(); c.arc(0, 0, 11, 0, TAU); c.fill();
+    const pts = [[0, 0], [-6, -3], [6, -3], [-3, 5], [4, 5.5], [0, -7], [-8, 3], [8, 3], [-3, -6.5]];
+    for (const [x, y] of pts) {
+      c.fillStyle = '#ff7b2c'; c.beginPath(); c.arc(x, y, 3, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.8)'; c.beginPath(); c.arc(x - 1, y - 1, 0.9, 0, TAU); c.fill();
+    }
+    c.fillStyle = '#7cc35a'; c.beginPath(); c.ellipse(7, -7.5, 4.5, 2, -0.6, 0, TAU); c.fill();
+  },
+];
+function drawPlate(c, ti, x, y, r, shadow = true) {
+  c.save(); c.translate(x, y);
+  if (shadow) { c.fillStyle = 'rgba(30,35,45,.28)'; c.beginPath(); c.ellipse(r * 0.07, r * 0.14, r, r * 0.92, 0, 0, TAU); c.fill(); }
+  c.fillStyle = '#fbf8f1'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+  c.lineWidth = r * 0.17; c.strokeStyle = TYPES[ti].rim; c.beginPath(); c.arc(0, 0, r - r * 0.085, 0, TAU); c.stroke();
+  c.lineWidth = Math.max(0.5, r * 0.04); c.strokeStyle = 'rgba(0,0,0,.08)'; c.beginPath(); c.arc(0, 0, r * 0.68, 0, TAU); c.stroke();
+  const k = r / 22 * 0.84; c.scale(k, k); SUSHI[ti](c);
+  c.restore();
+}
+function drawWildPlate(c, x, y, r) {
+  c.save(); c.translate(x, y);
+  c.fillStyle = '#fbf8f1'; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill();
+  c.lineWidth = r * 0.2;
+  TYPES.forEach((ty, i) => { c.strokeStyle = ty.rim; c.beginPath(); c.arc(0, 0, r - r * 0.1, i * TAU / 6, (i + 1) * TAU / 6); c.stroke(); });
+  c.fillStyle = '#2a1d14'; c.font = `600 ${Math.round(r * 1.15)}px Mitr, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('?', 0, r * 0.06);
+  c.restore();
+}
+function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+
+// ---------- DOM ----------
+const $ = id => document.getElementById(id);
+const app = $('app'), board = $('board'), cv = $('cv'), ctx = cv.getContext('2d'), tray = $('tray'), hud = $('hud');
+let scale = 1, dpr = 1, staticLayer = null;
+
+// sushi columns: tap one to send its top run of matching pieces
+const LANE_SHOW = 7, LANE_W = 80, LANE_STEP = 31, LANE_H = 48 + (LANE_SHOW - 1) * LANE_STEP;
+let laneEls = [];
+function buildLanes(n) {
+  tray.innerHTML = ''; laneEls = [];
+  tray.style.setProperty('--cols', n);
+  for (let i = 0; i < n; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'lane';
+    btn.innerHTML = `<span class="key">${i + 1}</span><canvas width="${LANE_W * 2}" height="${LANE_H * 2}"></canvas><span class="left"></span>`;
+    btn.addEventListener('pointerdown', e => { e.preventDefault(); tapLane(i); });
+    btn.addEventListener('click', e => { if (e.detail === 0) tapLane(i); });
+    tray.appendChild(btn);
+    laneEls.push({ btn, cv: btn.querySelector('canvas'), left: btn.querySelector('.left') });
+  }
+  if (typeof layout === 'function' && staticLayer) layout();
+}
+// one sushi piece without its plate, sized to the column
+function drawPiece(c, ti, x, y, size) {
+  c.save(); c.translate(x, y);
+  c.fillStyle = 'rgba(40,20,5,.28)'; c.beginPath(); c.ellipse(0, size * 0.42, size * 0.9, size * 0.32, 0, 0, TAU); c.fill();
+  const k = size / 17; c.scale(k, k); SUSHI[ti](c);
+  c.restore();
+}
+function drawLane(cvs, col, k, wanted) {
+  const c = cvs.getContext('2d');
+  c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, LANE_W, LANE_H);
+  const n = Math.min(col.length, LANE_SHOW);
+  // deepest first so each piece sits on top of the one below it
+  for (let j = n - 1; j >= 0; j--) {
+    const y = 26 + j * LANE_STEP;
+    if (j === 0) {
+      c.beginPath(); c.ellipse(LANE_W / 2, y + 2, 37, 25, 0, 0, TAU);
+      c.fillStyle = 'rgba(255,240,210,.22)'; c.fill();
+    }
+    c.globalAlpha = j === 0 ? 1 : Math.max(0.55, 0.95 - j * 0.07);
+    drawPiece(c, col[j], LANE_W / 2, y, j === 0 ? 31 : 28);
+    c.globalAlpha = 1;
+  }
+}
+let traySig = '';
+function syncTray() {
+  if (!G) return;
+  const want = wantNow();
+  const sig = JSON.stringify([G.cols, want, G.armed, G.plates.length + G.queue.length, G.idle, G.spawned, G.customers.map(c => c.state).join()]);
+  if (sig === traySig) return;
+  traySig = sig;
+  G.cols.forEach((col, i) => {
+    const el = laneEls[i]; if (!el) return;
+    const k = tapSize(col), wanted = k > 0 && want[col[0]] > 0, risk = k > 0 && laneRisk(i);
+    drawLane(el.cv, col, k, wanted);
+    el.btn.disabled = !col.length;
+    el.btn.classList.toggle('risk', risk);
+    el.btn.classList.toggle('armed', G.armed === i);
+    el.left.textContent = !col.length ? 'หมด' : G.armed === i ? 'แตะอีกครั้ง' : risk ? 'จะเต็ม!' : 'เหลือ ' + col.length;
+    el.btn.setAttribute('aria-label', col.length ? `แถว ${i + 1}: ส่ง${TYPES[col[0]].name} 1 ชิ้น, เหลือ ${col.length} ชิ้น` : `แถว ${i + 1} หมดแล้ว`);
+  });
+}
+
+buildLanes(4);
+
+function layout() {
+  const cs = getComputedStyle(app);
+  const W = app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const H = app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  const wide = W >= H + 340;
+  app.classList.toggle('wide', wide);
+  let size;
+  if (wide) {
+    hud.style.width = tray.style.width = $('nextq').style.width = '';
+    size = Math.min(H, W - 342, 760);
+  } else {
+    const guess = Math.min(W, 680);
+    hud.style.width = tray.style.width = $('nextq').style.width = guess + 'px';
+    const h = H - hud.offsetHeight - tray.offsetHeight - $('nextq').offsetHeight - 30;
+    size = Math.min(W, h, 680);
+  }
+  size = Math.max(220, Math.floor(size));
+  board.style.width = board.style.height = size + 'px';
+  if (!wide) hud.style.width = tray.style.width = $('nextq').style.width = Math.max(size, Math.min(W, 340)) + 'px';
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
+  scale = cv.width / V;
+  buildStatic();
+}
+
+function mulberry(a) { return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function buildStatic() {
+  staticLayer = document.createElement('canvas');
+  staticLayer.width = cv.width; staticLayer.height = cv.height;
+  const c = staticLayer.getContext('2d');
+  c.setTransform(scale, 0, 0, scale, 0, 0);
+  // hinoki counter
+  c.fillStyle = '#ecd2a4'; c.fillRect(0, 0, V, V);
+  const rnd = mulberry(11);
+  for (let i = 0; i < 150; i++) {
+    const y = rnd() * V, amp = 1 + rnd() * 3, ph = rnd() * 6;
+    c.strokeStyle = `rgba(160,110,60,${0.05 + rnd() * 0.12})`; c.lineWidth = 0.5 + rnd() * 1.6;
+    c.beginPath(); c.moveTo(0, y);
+    for (let x = 0; x <= V; x += 20) c.lineTo(x, y + Math.sin(x * 0.012 + ph) * amp);
+    c.stroke();
+  }
+  // stools
+  SEATS.forEach(st => { c.fillStyle = 'rgba(120,72,38,.18)'; c.beginPath(); c.arc(st.fx, st.fy + 6, 22, 0, TAU); c.fill(); });
+  // kitchen floor
+  rr(c, 184, 184, 272, 272, 16); c.fillStyle = '#2b3452'; c.fill();
+  c.save(); rr(c, 184, 184, 272, 272, 16); c.clip();
+  c.strokeStyle = 'rgba(255,255,255,.05)'; c.lineWidth = 1;
+  for (let p = 184; p <= 456; p += 34) { c.beginPath(); c.moveTo(p, 184); c.lineTo(p, 456); c.moveTo(184, p); c.lineTo(456, p); c.stroke(); }
+  c.restore();
+  // belt base + shadow
+  c.save(); c.shadowColor = 'rgba(60,35,10,.35)'; c.shadowBlur = 16; c.shadowOffsetY = 4;
+  tracePath(c); c.lineWidth = BW + 8; c.strokeStyle = '#5f6a7b'; c.stroke(); c.restore();
+  tracePath(c); c.lineWidth = BW; c.strokeStyle = '#bcc5d1'; c.stroke();
+  tracePath(c); c.lineWidth = BW - 20; c.strokeStyle = 'rgba(255,255,255,.18)'; c.stroke();
+  // pass marker where plates enter
+  const dp = pathPos(DROP_S);
+  c.save(); c.setLineDash([4, 4]); c.strokeStyle = 'rgba(224,83,47,.65)'; c.lineWidth = 2.5;
+  c.beginPath(); c.arc(dp.x, dp.y, 25, 0, TAU); c.stroke(); c.restore();
+  c.fillStyle = '#c9a46e'; rr(c, 404, 412, 44, 26, 6); c.fill();
+  c.fillStyle = '#2a1d14'; c.font = '500 14px Mitr, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('ส่ง', 426, 426);
+}
+
+// ---------- audio ----------
+let actx = null, muted = false;
+try { muted = localStorage.getItem('sushibelt-muted') === '1'; } catch (e) {}
+function tone(f, d = 0.08, type = 'sine', vol = 0.07, slide = 0, delay = 0) {
+  if (muted) return;
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime + delay, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(f * slide, t + d);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0008, t + d);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d + 0.03);
+  } catch (e) {}
+}
+const sfx = {
+  send: () => tone(520, 0.07, 'triangle', 0.06, 1.3),
+  full: () => tone(160, 0.12, 'square', 0.04),
+  eat: () => tone(880, 0.06, 'sine', 0.06, 1.2),
+  done: () => { tone(660, 0.1, 'triangle', 0.07); tone(990, 0.16, 'triangle', 0.07, 1, 0.09); },
+  over: () => { tone(400, 0.2, 'square', 0.05, 0.7); tone(260, 0.4, 'square', 0.05, 0.6, 0.18); },
+  unlock: () => { tone(700, 0.08, 'triangle', 0.06); tone(940, 0.08, 'triangle', 0.06, 1, 0.08); tone(1180, 0.14, 'triangle', 0.06, 1, 0.16); },
+};
+function syncSoundIcon() { $('sndWave').hidden = muted; $('sndOff').hidden = !muted; $('btnSound').setAttribute('aria-label', muted ? 'เปิดเสียง' : 'ปิดเสียง'); }
+$('btnSound').addEventListener('click', () => { muted = !muted; try { localStorage.setItem('sushibelt-muted', muted ? '1' : '0'); } catch (e) {} syncSoundIcon(); if (!muted) sfx.send(); });
+syncSoundIcon();
+
+// ---------- game state ----------
+const SKIN = ['#f6d3b5', '#eebf97', '#dda574', '#b98057', '#8d5a3b'];
+const HAIR = ['#2b211c', '#4a3426', '#17171d', '#8a5a33', '#cfc8bb', '#6b3b5a'];
+const SHIRT = ['#5a8fd8', '#e07a5f', '#81b29a', '#f2b45f', '#9c89b8', '#3f7cc0', '#d6505a', '#4aa3a2'];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+// ---------- levels ----------
+// Levels never end: settings keep tightening and then hold at their caps.
+// Sushi waits in stacked columns under the counter. Tapping a column sends its top run of matching pieces
+// to the belt. Customers each want several pieces of one type. Serve every piece to clear the level;
+// the belt filling up loses it. Stars count how full the belt ever got.
+const INTROS = {
+  1: { key: 'columns', title: 'วิธีเล่น', text: 'ซูชิเรียงเป็นแถวอยู่ด้านล่าง แตะ 1 ครั้ง เชฟทำชิ้นบนสุดของแถวนั้น 1 ชิ้นลงสายพาน ดูป้ายลูกค้าว่าใครรออะไร และดูคิวลูกค้าถัดไปเหนือแถวซูชิเพื่อวางแผน ชิ้นที่ตรงกับลูกค้าไม่ได้แปลว่าควรส่งเสมอ บางทีควรขุดแถวอื่นก่อน กด ▶▶ เพื่อเร่งสายพาน ซูชิที่ยังไม่มีใครรอ (รวมลูกค้าคิวถัดไปที่กำลังจะมานั่ง) จะวนค้างบนสายพาน ถ้าชิ้นค้างเต็มหลอด = ไม่ผ่าน ส่วนชิ้นที่มีคนรอแล้วไม่นับ แตะเร็วได้ไม่ต้องกลัว วางแผนขุดชิ้นที่ต้องใช้ขึ้นมาให้ดี' },
+};
+function levelCfg(n) {
+  return {
+    n,
+    types: Math.min(6, 5 + Math.floor(n / 4)),
+    cols: n <= 2 ? 4 : n <= 20 ? 5 : 6,
+    seats: Math.min(4, 2 + Math.floor(n / 6)),
+    orderMin: Math.min(6, 4 + Math.floor(n / 6)),
+    orderMax: Math.min(8, 6 + Math.floor(n / 5)),
+    target: Math.min(18, 7 + Math.floor(n * 0.6)),
+    limit: n <= 3 ? 7 : 8,
+    runMax: n <= 5 ? 2 : 3,
+    speed: Math.min(150, 90 + 4 * (n - 1)),
+    spread: 12,
+    greedyMax: n <= 1 ? 0.4 : n <= 3 ? 0.25 : n <= 6 ? 0.15 : n <= 15 ? 0.08 : 0.05,
+  };
+}
+const levelRules = cfg => [cfg.cols + ' แถว', 'ซูชิ ' + cfg.types + ' แบบ'];
+// Stars judge the order of taps only, never how fast they came: the taps are replayed in the level model,
+// where waiting customers take matching pieces at once, and the most pieces ever left waiting is compared
+// with the best order the solver can find.
+// Clearing a level is 3 stars. Only help costs stars: one helper (or one ad revive) = 2, more = 1.
+const starsFor = helps => helps === 0 ? 3 : helps === 1 ? 2 : 1;
+let progress = {}, seenIntro = {};
+try { progress = JSON.parse(localStorage.getItem('sushibelt-levels-v2') || '{}') || {}; } catch (e) { progress = {}; }
+try { seenIntro = JSON.parse(localStorage.getItem('sushibelt-seen-v2') || '{}') || {}; } catch (e) { seenIntro = {}; }
+const unlockedUpTo = () => { let n = 1; while (progress[n]) n++; return n; };
+
+// level layouts come from a seeded generator, so level n is the same puzzle on every device
+let rnd = Math.random;
+function seeded(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const rpick = a => a[Math.floor(rnd() * a.length)];
+function makeRoster(cfg) {
+  const roster = [];
+  for (let i = 0; i < cfg.target; i++) {
+    let t; do { t = Math.floor(rnd() * cfg.types); } while (roster.length && roster[roster.length - 1].order[0].type === t && rnd() < 0.7);
+    roster.push({ wild: false, order: [{ type: t, count: cfg.orderMin + Math.floor(rnd() * (cfg.orderMax - cfg.orderMin + 1)) }] });
+  }
+  return roster;
+}
+// cut every order into short runs, roughly in arrival order (with some burying), and deal them into columns
+function makeColumns(cfg, roster) {
+  const runs = [];
+  roster.forEach((r, ci) => {
+    let left = r.order[0].count;
+    while (left > 0) { const k = Math.min(left, 1 + Math.floor(rnd() * cfg.runMax)); runs.push({ type: r.order[0].type, k, key: ci + rnd() * cfg.spread }); left -= k; }
+  });
+  runs.sort((a, b) => a.key - b.key);
+  const cols = Array.from({ length: cfg.cols }, () => []);
+  runs.forEach(run => {
+    const lens = cols.map(c => c.length), min = Math.min(...lens);
+    const choices = cols.map((c, i) => i).filter(i => lens[i] <= min + 3);
+    const col = cols[rpick(choices)];
+    for (let j = 0; j < run.k; j++) col.push(run.type);
+  });
+  return cols;
+}
+
+// ---------- level generator ----------
+// A fast model of the shop (seated customers take matching pieces at once; anything else waits on the belt)
+// is used to keep only layouts that careful digging can clear but tapping whatever matches usually cannot.
+function genStart(Lv) {
+  const st = { ptr: Lv.cols.map(() => 0), seats: [], next: 0, belt: new Array(TYPES.length).fill(0), bt: 0, served: 0 };
+  for (let i = 0; i < Lv.seats && st.next < Lv.roster.length; i++) { const idx = st.next++, r = Lv.roster[idx].order[0]; st.seats.push([r.type, r.count, idx]); }
+  return st;
+}
+function genSettle(st, Lv) {
+  let moved = true;
+  while (moved) {
+    moved = false;
+    st.seats.sort((a, b) => a[2] - b[2]);
+    for (const s of st.seats) {
+      if (s[1] > 0) {
+        const m = Math.min(st.belt[s[0]], s[1]);
+        if (m) { st.belt[s[0]] -= m; st.bt -= m; s[1] -= m; st.served += m; moved = true; }
+      }
+      if (s[1] <= 0 && st.next < Lv.roster.length) { const idx = st.next++, r = Lv.roster[idx].order[0]; s[0] = r.type; s[1] = r.count; s[2] = idx; moved = true; }
+    }
+  }
+}
+// one tap; null when it would fill the belt or leave it one short of full with nothing anyone wants
+function genStep(st, Lv, lane) {
+  const col = Lv.cols[lane], p = st.ptr[lane];
+  if (p >= col.length || st.bt + 1 >= Lv.limit) return null;
+  const n = { ptr: st.ptr.slice(), seats: st.seats.map(s => s.slice()), next: st.next, belt: st.belt.slice(), bt: st.bt + 1, served: st.served };
+  n.ptr[lane]++; n.belt[col[p]]++; n.path = st.path ? st.path.concat(lane) : [lane];
+  genSettle(n, Lv);
+  return n.bt >= Lv.limit - 1 && n.served < Lv.total ? null : n;
+}
+const genWanted = (st, Lv, lane) => { const t = Lv.cols[lane][st.ptr[lane]]; return t !== undefined && st.seats.some(s => s[1] > 0 && s[0] === t); };
+function genSolve(Lv, beam = 60, from) {
+  let front = [Object.assign(from || genStart(Lv), { path: [] })];
+  while (front.length) {
+    const seen = new Map();
+    for (const st of front) for (let l = 0; l < Lv.cols.length; l++) {
+      const n = genStep(st, Lv, l); if (!n) continue;
+      if (n.served >= Lv.total) return n.path;
+      const key = n.ptr.join(',') + '|' + n.seats.map(s => s.join(':')).join(';');
+      if (!seen.has(key)) seen.set(key, n);
+    }
+    front = [...seen.values()];
+    if (front.length > beam) {
+      const score = s => s.served * 10 - s.bt * 7 + Lv.cols.reduce((a, c, l) => a + (genWanted(s, Lv, l) ? 3 : 0), 0);
+      front.sort((a, b) => score(b) - score(a)); front.length = beam;
+    }
+  }
+  return null;
+}
+// most pieces left waiting on the belt when these taps are played in this order
+function orderWaste(Lv, taps) {
+  const st = genStart(Lv); let peak = 0;
+  for (const lane of taps) {
+    const col = Lv.cols[lane], p = st.ptr[lane];
+    if (p >= col.length) continue;
+    st.ptr[lane]++; st.belt[col[p]]++; st.bt++;
+    genSettle(st, Lv); peak = Math.max(peak, st.bt);
+  }
+  return peak;
+}
+// the fewest pieces left waiting that the solver can clear this level with
+function bestWaste(Lv) {
+  for (let lim = 2; lim <= Lv.limit + 6; lim++) if (genSolve({ ...Lv, limit: lim })) return lim - 2;
+  return Lv.limit;
+}
+// share of runs a player wins by tapping any matching top piece, and digging a random column otherwise
+function genGreedyRate(Lv, trials = 16) {
+  let wins = 0;
+  for (let t = 0; t < trials; t++) {
+    let st = genStart(Lv);
+    while (st && st.served < Lv.total) {
+      const lanes = Lv.cols.map((c, l) => l).filter(l => st.ptr[l] < Lv.cols[l].length);
+      const good = lanes.filter(l => genWanted(st, Lv, l));
+      const from = good.length ? good : lanes;
+      st = from.length ? genStep(st, Lv, from[Math.floor(rnd() * from.length)]) : null;
+    }
+    if (st) wins++;
+  }
+  return wins / trials;
+}
+function buildLevel(cfg) {
+  rnd = seeded(Math.imul(cfg.n, 2654435761) ^ 0x5a5b1);
+  try { return buildLevelSeeded(cfg); } finally { rnd = Math.random; }
+}
+function buildLevelSeeded(cfg) {
+  let limit = cfg.limit;
+  for (let round = 0; round < 8; round++, limit++) {
+    let best = null;
+    const t0 = performance.now();
+    for (let tries = 0; tries < 12 && performance.now() - t0 < 5000; tries++) {
+      const roster = makeRoster(cfg), cols = makeColumns(cfg, roster);
+      const Lv = { roster, cols, seats: cfg.seats, limit, total: roster.reduce((a, r) => a + r.order[0].count, 0) };
+      if (!genSolve(Lv)) continue;
+      const g = genGreedyRate(Lv);
+      if (g <= cfg.greedyMax) return Lv;
+      if (!best || g < best.g) best = { Lv, g };
+    }
+    if (best) return best.Lv;
+  }
+  const roster = makeRoster(cfg);
+  return { roster, cols: makeColumns(cfg, roster), seats: cfg.seats, limit: limit + 4, total: roster.reduce((a, r) => a + r.order[0].count, 0) };
+}
+
+let G = null, running = false, toastTimer = 0, fast = false;
+const FAST_X = 2.2;
+function setFast(on) {
+  fast = on;
+  const b = $('btnFast'); b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-label', on ? 'สายพานความเร็วปกติ' : 'เร่งสายพาน');
+}
+
+function newGame(n) {
+  const cfg = levelCfg(n), lv = buildLevel(cfg), roster = lv.roster, cols = lv.cols;
+  cfg.limit = lv.limit;
+  // matches the level model: it may leave at most limit - 2 pieces waiting, so limit - 1 loses
+  const cap = lv.limit - 1;
+  const lv0 = { roster, cols: cols.map(c => c.slice()), seats: cfg.seats, limit: lv.limit, total: lv.total };
+  G = {
+    lv0, taps: [], cap, idle: 0, maxIdle: 0, helps: 0, spare: [],
+    cfg, roster, cols, queueLane: [], revives: 0, total: roster.reduce((a, r) => a + r.order[0].count, 0), armed: -1, peak: 0,
+    t: 0, plates: [], queue: [], flyers: [], floats: [],
+    customers: SEATS.map(seat => ({ seat, state: 'off', timer: 0, anim: 0 })),
+    score: 0, served: 0, sushi: 0, spawned: 0, beltDist: 0,
+    chefPush: 0, over: false, cleared: false, endT: 0, failReason: null,
+  };
+  for (let i = 0; i < cfg.seats; i++) { const c = G.customers[SEAT_ORDER[i]]; c.state = 'empty'; c.timer = 0.4 + i * 0.5; }
+  hudCache = {}; traySig = ''; buildLanes(cfg.cols); syncHelper();
+  const fresh = n > 1 && levelCfg(n - 1).types < cfg.types;
+  showToast(`ด่าน ${n} · เสิร์ฟ ${G.total} ชิ้น` + (fresh ? ` · เมนูใหม่: ${TYPES[cfg.types - 1].name}` : ''), 2600);
+}
+
+function spawnCustomer(c) {
+  c.idx = G.spawned;
+  const spec = G.roster[G.spawned++];
+  c.wild = false;
+  c.order = spec.order.map(it => ({ ...it }));
+  c.total = c.order[0].count;
+  c.state = 'arriving'; c.anim = 0; c.eat = 0; c.cool = 0;
+  c.look = { skin: pick(SKIN), hair: pick(HAIR), shirt: pick(SHIRT), cap: pick(SHIRT), style: Math.floor(Math.random() * 3), glasses: Math.random() < 0.22 };
+}
+
+// how many more pieces of each type seated customers still need, after what is already on its way
+function wantNow() {
+  const want = new Array(TYPES.length).fill(0);
+  G.customers.forEach(c => { if (c.state === 'waiting' || c.state === 'arriving') want[c.order[0].type] += c.order[0].count; });
+  G.plates.forEach(p => want[p.type]--);
+  G.queue.forEach(t => want[t]--);
+  return want;
+}
+// The shop right now as a level-model state: seated customers with what they still need, free seats filled
+// from the queue, and every piece on the board or belt counted as already handed over. Pieces in transit
+// never count against the player, so tapping fast is never punished.
+function modelNow(extra) {
+  const seats = [];
+  G.customers.forEach(c => { if ((c.state === 'waiting' || c.state === 'arriving') && c.order && c.order.length) seats.push([c.order[0].type, c.order[0].count, c.idx]); });
+  let next = G.spawned;
+  while (seats.length < G.cfg.seats && next < G.roster.length) { const r = G.roster[next].order[0]; seats.push([r.type, r.count, next++]); }
+  const belt = new Array(TYPES.length).fill(0);
+  G.plates.forEach(p => belt[p.type]++); G.queue.forEach(t => belt[t]++);
+  if (extra !== undefined) belt[extra]++;
+  const st = { ptr: G.cols.map(() => 0), seats, next, belt, bt: belt.reduce((x, y) => x + y, 0), served: 0 };
+  genSettle(st, { roster: G.roster });
+  return st;
+}
+// pieces nobody is waiting for: this is what fills up and loses the level
+const idleCount = extra => modelNow(extra).bt;
+// Helper: the chef takes every piece nobody is waiting for off the belt (and the board) and keeps it in a
+// pick list under the queue. The player sends them back one at a time whenever they are wanted.
+function useHelper() {
+  if (!running || !G || G.over || G.cleared) return;
+  const left = modelNow().belt.slice();   // pieces of each type that stay unclaimed
+  let took = 0;
+  const lift = (type, x, y) => { G.spare.push(type); G.flyers.push({ type, x0: x, y0: y, x1: 320, y1: 400, t: 0 }); took++; };
+  // newest plates first, so pieces still near the chef come back before ones already on their way round
+  for (const p of G.plates.slice().sort((a, b) => b.born - a.born)) {
+    if (left[p.type] > 0) { left[p.type]--; const pos = pathPos(p.s); lift(p.type, pos.x, pos.y); p.gone = true; }
+  }
+  G.plates = G.plates.filter(p => !p.gone);
+  for (let i = G.queue.length - 1; i >= 0; i--) {
+    const t = G.queue[i];
+    if (left[t] > 0) { left[t]--; G.queue.splice(i, 1); G.queueLane.splice(i, 1); lift(t, 320, 406); }
+  }
+  if (!took) { showToast('ไม่มีซูชิค้างให้เก็บ', 1800); return; }
+  G.helps++; G.armed = -1; traySig = ''; G.chefPush = 1; sfx.send();
+  showToast(`เก็บ ${took} ชิ้น · ได้สูงสุด ${starsFor(G.helps)} ดาว`, 2200);
+  syncHelper();
+}
+// send one kept piece back to the belt
+function tapSpare(i) {
+  if (!running || !G || G.over || G.cleared) return;
+  const t = G.spare[i];
+  if (t === undefined) return;
+  if (G.queue.length + 1 > QUEUE_MAX) { sfx.full(); showToast('รอเชฟวางชิ้นก่อนหน้า'); return; }
+  if (idleCount(t) >= G.cap && G.armed !== 100 + i) { G.armed = 100 + i; sfx.full(); showToast('ยังไม่มีใครรอ แตะอีกครั้งเพื่อส่ง', 2400); syncHelper(); return; }
+  G.armed = -1;
+  G.spare.splice(i, 1);
+  G.queue.push(t); G.queueLane.push(-1);
+  G.chefPush = 1; G.chefSlot = G.queue.length - 1; sfx.send(); traySig = '';
+  syncHelper();
+}
+function syncHelper() {
+  if (!G) return;
+  const b = $('btnHint');
+  b.querySelector('.hc').textContent = G.helps ? '×' + G.helps : '';
+  b.setAttribute('aria-label', 'ตัวช่วย: เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน' + (G.helps ? ` ใช้แล้ว ${G.helps} ครั้ง` : ''));
+  b.classList.toggle('nudge', !!G.stuck);
+  const box = $('spare'), items = $('spareItems');
+  box.hidden = !G.spare.length;
+  items.innerHTML = '';
+  G.spare.forEach((t, i) => {
+    const el = document.createElement('button');
+    el.type = 'button'; el.className = 'sp' + (G.armed === 100 + i ? ' armed' : '');
+    el.innerHTML = '<canvas width="64" height="64"></canvas>';
+    const c = el.querySelector('canvas').getContext('2d'); c.scale(2, 2); drawPlate(c, t, 16, 16, 14, false);
+    el.setAttribute('aria-label', 'ส่ง' + TYPES[t].name + ' ที่เชฟเก็บไว้');
+    el.addEventListener('pointerdown', e => { e.preventDefault(); tapSpare(i); });
+    el.addEventListener('click', e => { if (e.detail === 0) tapSpare(i); });
+    items.appendChild(el);
+  });
+}
+// one tap = the chef makes one piece, the top of the column
+const tapSize = col => col.length ? 1 : 0;
+const laneRisk = i => G.cols[i].length > 0 && idleCount(G.cols[i][0]) >= G.cap;
+
+function nope(i, msg) {
+  sfx.full(); showToast(msg);
+  const el = laneEls[i] && laneEls[i].btn;
+  if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+}
+function tapLane(i) {
+  if (!running || !G || G.over || G.cleared) return;
+  const col = G.cols[i];
+  if (!col || !col.length) return;
+  const k = tapSize(col);
+  if (G.queue.length + k > QUEUE_MAX) return nope(i, 'เชฟยังวางชิ้นก่อนหน้าไม่เสร็จ รอแป๊บ');
+  if (laneRisk(i) && G.armed !== i) { G.armed = i; sfx.full(); showToast('ยังไม่มีใครรอ แตะอีกครั้งเพื่อส่ง', 2400); return; }
+  G.armed = -1;
+  G.queue.push(...col.splice(0, k));
+  for (let q = 0; q < k; q++) G.taps.push(i);
+  for (let q = 0; q < k; q++) G.queueLane.push(i);
+  G.chefPush = 1; G.chefSlot = G.queue.length - 1; sfx.send();
+  if (G.armed >= 100) { G.armed = -1; syncHelper(); }
+  const el = laneEls[i].btn; el.classList.add('hit'); setTimeout(() => el.classList.remove('hit'), 90);
+}
+function dropFree() { return !G.plates.some(p => Math.abs(sd(p.s, DROP_S)) < MIN_GAP); }
+
+function showToast(msg, ms = 1400) {
+  const el = $('toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+function update(dt) {
+  const g = G; g.t += dt;
+  const sp = g.cfg.speed * (fast ? FAST_X : 1);
+  g.beltDist += sp * dt;
+  g.chefPush = Math.max(0, g.chefPush - dt * 3);
+
+  // chef places queued pieces when the pass is clear
+  if (g.queue.length && dropFree() && !g.cleared) {
+    g.plates.push({ type: g.queue.shift(), lane: g.queueLane.shift(), s: DROP_S, born: g.t });
+    g.peak = Math.max(g.peak, g.plates.length);
+  }
+  g.idle = g.cleared ? 0 : idleCount();
+  g.maxIdle = Math.max(g.maxIdle, g.idle);
+  if (!g.cleared && g.idle >= g.cap) { failLevel('belt'); return; }
+  // move pieces and let customers grab matches
+  const move = sp * dt;
+  for (let i = g.plates.length - 1; i >= 0; i--) {
+    const p = g.plates[i], prev = p.s;
+    p.s = (p.s + move) % L;
+    for (const c of g.customers) {
+      if (c.state !== 'waiting' || c.cool > 0 || c.order[0].type !== p.type) continue;
+      // first come, first served: an earlier customer waiting for the same sushi gets it
+      if (g.customers.some(o => o !== c && (o.state === 'waiting' || o.state === 'arriving') && o.order[0].type === p.type && o.idx < c.idx)) continue;
+      const d0 = sd(prev, c.seat.s), d1 = sd(p.s, c.seat.s);
+      if (d0 < 0 && d1 >= 0 && d1 < 30) {
+        const pos = pathPos(p.s);
+        g.plates.splice(i, 1);
+        g.flyers.push({ type: p.type, x0: pos.x, y0: pos.y, x1: c.seat.fx, y1: c.seat.fy + 8, t: 0 });
+        c.order[0].count--;
+        if (c.order[0].count <= 0) c.order.shift();
+        c.cool = 0.12; c.eat = 0.5;
+        g.score += 10; g.sushi++;
+        g.floats.push({ x: c.seat.chx, y: c.seat.chy - 22, text: '+10', col: '#2a1d14', t: 0 });
+        sfx.eat();
+        if (!c.order.length) {
+          g.served++;
+          const bonus = 15 * c.total;
+          g.score += bonus;
+          g.floats.push({ x: c.seat.chx, y: c.seat.chy - 44, text: '+' + bonus, col: '#c2401f', t: 0, big: true });
+          c.state = 'leaving'; c.anim = 0; sfx.done();
+          if (g.served >= g.roster.length) clearLevel();
+        }
+        break;
+      }
+    }
+  }
+  // customers
+  for (const c of g.customers) {
+    c.cool = Math.max(0, (c.cool || 0) - dt);
+    c.eat = Math.max(0, (c.eat || 0) - dt);
+    if (c.state === 'empty') { c.timer -= dt; if (c.timer <= 0 && g.spawned < g.roster.length) spawnCustomer(c); }
+    else if (c.state === 'arriving') { c.anim += dt; if (c.anim >= 0.45) c.state = 'waiting'; }
+    else if (c.state === 'leaving') {
+      c.anim += dt;
+      if (c.anim >= 0.9) { c.state = 'empty'; c.timer = 0.6 + Math.random() * 0.8; }
+    }
+  }
+  // dead end: one more idle piece loses and nothing left to send is wanted. Point at the helper.
+  const stuck = !g.cleared && g.idle >= g.cap - 1 && (g.cols.some(col => col.length) || g.spare.length) &&
+    g.cols.every((col, i) => !col.length || laneRisk(i)) && g.spare.every(t => idleCount(t) >= g.cap);
+  if (stuck !== !!g.stuck) {
+    g.stuck = stuck; syncHelper();
+    if (stuck) showToast('ทางตัน! กดปุ่มช่วยได้', 3000);
+  }
+  g.flyers = g.flyers.filter(f => (f.t += dt) < 0.3);
+  g.floats = g.floats.filter(f => (f.t += dt) < 1.1);
+  if (g.cleared && g.t - g.endT > 1.4) { running = false; showResult(); }
+}
+
+function clearLevel() {
+  const g = G; g.cleared = true; g.endT = g.t;
+  g.stars = starsFor(g.helps);
+  g.score += g.stars * 100;
+  const n = g.cfg.n, prev = progress[n] || { stars: 0, score: 0 };
+  g.newBest = g.score > prev.score;
+  progress[n] = { stars: Math.max(prev.stars, g.stars), score: Math.max(prev.score, g.score) };
+  try { localStorage.setItem('sushibelt-levels-v2', JSON.stringify(progress)); } catch (e) {}
+  Board.sync();
+  setTimeout(() => sfx.unlock(), 300);
+}
+function failLevel(reason) {
+  G.over = true; G.failReason = reason;
+  running = false; G.overT = performance.now(); sfx.over();
+  setTimeout(showResult, 900);
+}
+function showResult() {
+  const g = G, win = g.cleared, n = g.cfg.n;
+  $('rEyebrow').textContent = 'ด่าน ' + n + (win ? ' · ผ่าน' : ' · ไม่ผ่าน');
+  $('rTitle').textContent = win ? (g.stars === 3 ? 'สมบูรณ์แบบ!' : 'ผ่านด่านแล้ว!') : g.failReason === 'stuck' ? 'ทางตัน!' : 'ซูชิค้างเต็มสายพาน!';
+  const st = $('rStars'); st.hidden = !win;
+  if (win) st.innerHTML = [1, 2, 3].map(i => `<span class="${i <= g.stars ? 'on' : ''}">★</span>`).join('');
+  $('rNote').textContent = win
+    ? (g.helps === 0 ? 'ผ่านด่านโดยไม่ใช้ตัวช่วย ได้ 3 ดาวเต็ม'
+      : `ใช้ตัวช่วย ${g.helps} ครั้ง ได้ ${g.stars} ดาว · เล่นใหม่โดยไม่ใช้ตัวช่วยเพื่อเก็บ 3 ดาว`)
+    : (g.failReason === 'stuck' ? 'ทุกแถวเหลือแต่ชิ้นที่ไม่มีใครรอ ส่งเพิ่มอีกชิ้นก็เต็ม ' : `ซูชิที่ไม่มีใครรอค้างครบ ${g.cap} ชิ้น `) + `เสิร์ฟได้ ${g.sushi} จาก ${g.total} ชิ้น ดูคิวลูกค้าถัดไป แล้วขุดเฉพาะชิ้นที่จะได้ใช้เร็วๆ`;
+  $('rScore').textContent = g.score.toLocaleString();
+  $('rBest').innerHTML = win && g.newBest ? '<span class="newbest">สถิติใหม่!</span>' : '';
+  $('rServed').textContent = g.served + ' / ' + g.roster.length;
+  $('rSushi').textContent = g.sushi + ' / ' + g.total;
+  const next = $('btnNext');
+  next.hidden = !win;
+  $('btnRevive').hidden = win || g.revives >= 1;
+  $('btnRetry').textContent = win ? 'เล่นด่านนี้อีกครั้ง' : 'เริ่มด่านนี้ใหม่';
+  $('btnRetry').classList.toggle('ghost', win || g.revives < 1);
+  $('ovResult').hidden = false;
+  (win ? next : !$('btnRevive').hidden ? $('btnRevive') : $('btnRetry')).focus();
+}
+
+// ---------- drawing ----------
+const easeOut = k => 1 - (1 - Math.min(1, Math.max(0, k))) ** 3;
+function drawCustomer(c, cu, now) {
+  const st = cu.seat, lk = cu.look;
+  let e = 1;
+  if (cu.state === 'arriving') e = easeOut(cu.anim / 0.45);
+  else if (cu.state === 'leaving') e = 1 - easeOut(Math.max(0, (cu.anim - 0.35) / 0.55));
+  const off = (1 - e) * 24, fx = st.fx + st.ox * off, fy = st.fy + st.oy * off;
+  const waiting = cu.state === 'waiting' || cu.state === 'arriving';
+  const eating = cu.eat > 0, happy = cu.state === 'leaving';
+  c.save(); c.globalAlpha = e;
+  // body
+  c.fillStyle = lk.shirt; c.beginPath(); c.ellipse(fx, fy + 25, cu.wild ? 32 : 25, cu.wild ? 15 : 13, 0, 0, TAU); c.fill();
+  if (cu.wild) {
+    c.fillStyle = '#fffaf0'; c.beginPath(); c.moveTo(fx - 15, fy + 13); c.lineTo(fx + 15, fy + 13); c.lineTo(fx, fy + 36); c.closePath(); c.fill();
+    c.fillStyle = '#e0532f'; for (const [dx, dy] of [[-7, 17], [3, 18], [-2, 25], [8, 15]]) { c.beginPath(); c.arc(fx + dx, fy + dy, 1.8, 0, TAU); c.fill(); }
+  }
+  // head
+  c.fillStyle = lk.skin; c.beginPath(); c.arc(fx, fy, cu.wild ? 21 : 19, 0, TAU); c.fill();
+  // hair
+  if (lk.style === 2) {
+    c.fillStyle = lk.cap; c.beginPath(); c.arc(fx, fy - 3, 19.5, Math.PI, 0); c.closePath(); c.fill();
+    c.beginPath(); c.ellipse(fx + 5, fy - 3, 23, 4, 0, 0, TAU); c.fill();
+  } else {
+    c.fillStyle = lk.hair; c.beginPath(); c.arc(fx, fy - 2, 20, Math.PI, 0); c.lineTo(fx + 20, fy - 1);
+    c.quadraticCurveTo(fx + 4, fy - 14, fx - 20, fy - 1); c.closePath(); c.fill();
+    if (lk.style === 1) { c.beginPath(); c.arc(fx, fy - 22, 8, 0, TAU); c.fill(); }
+  }
+  // eyes
+  c.strokeStyle = '#2a1d14'; c.fillStyle = '#2a1d14'; c.lineWidth = 2; c.lineCap = 'round';
+  if (happy || eating) { for (const s of [-1, 1]) { c.beginPath(); c.arc(fx + s * 7, fy + 3, 3.2, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); } }
+  else { for (const s of [-1, 1]) { c.beginPath(); c.arc(fx + s * 7, fy + 1.5, 2.3, 0, TAU); c.fill(); } }
+  if (lk.glasses) { c.lineWidth = 1.4; for (const s of [-1, 1]) { c.beginPath(); c.arc(fx + s * 7, fy + 1.5, 5.2, 0, TAU); c.stroke(); } c.beginPath(); c.moveTo(fx - 2, fy + 1); c.lineTo(fx + 2, fy + 1); c.stroke(); c.lineWidth = 2; }
+  // mouth
+  if (eating) { const h = 1.5 + Math.abs(Math.sin(now * 0.02)) * 2.5; c.fillStyle = '#8a2f2a'; c.beginPath(); c.ellipse(fx, fy + 10, 3.5, h, 0, 0, TAU); c.fill(); }
+  else if (happy) { c.fillStyle = '#8a2f2a'; c.beginPath(); c.arc(fx, fy + 8, 5.5, 0, Math.PI); c.closePath(); c.fill(); }
+  else { c.beginPath(); c.arc(fx, fy + 7, 4, Math.PI * 0.2, Math.PI * 0.8); c.stroke(); }
+  if (happy || eating) { c.fillStyle = 'rgba(240,110,110,.35)'; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(fx + s * 12, fy + 8, 3.5, 2.2, 0, 0, TAU); c.fill(); } }
+  // order chip
+  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 98 : 74, x0 = cx - w / 2;
+  rr(c, x0, cy - 16, w, 32, 16); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
+  c.strokeStyle = cu.wild ? '#e0532f' : 'rgba(42,29,20,.18)'; c.lineWidth = cu.wild ? 2 : 1.2; c.stroke();
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  if (waiting) {
+    const cur = cu.order[0];
+    if (cur.type < 0) drawWildPlate(c, x0 + 20, cy, 12.5); else drawPlate(c, cur.type, x0 + 20, cy, 12.5, false);
+    c.fillStyle = '#2a1d14'; c.font = '600 19px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + 50, cy + 1);
+    if (multi) {
+      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 67, cy);
+      drawPlate(c, cu.order[1].type, x0 + 81, cy, 8.5, false);
+      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 91, cy - 11); }
+    }
+  } else {
+    c.font = '600 17px Mitr, sans-serif'; c.fillStyle = '#3f8f4f';
+    c.fillText('อิ่ม!', cx, cy + 1);
+  }
+  c.restore();
+}
+// two-bone arm of fixed length: the elbow bends instead of the arm stretching
+function chefArm(c, sx, sy, tx, ty, len, bend) {
+  let dx = tx - sx, dy = ty - sy, d = Math.hypot(dx, dy) || 1;
+  if (d > 2 * len - 1) { const k = (2 * len - 1) / d; dx *= k; dy *= k; d = 2 * len - 1; }
+  const a = Math.atan2(dy, dx) + bend * Math.acos(Math.min(1, d / (2 * len)));
+  const ex = sx + Math.cos(a) * len, ey = sy + Math.sin(a) * len, hx = sx + dx, hy = sy + dy;
+  c.beginPath(); c.moveTo(sx, sy); c.lineTo(ex, ey); c.lineTo(hx, hy); c.stroke();
+  return [hx, hy];
+}
+function drawChef(c, now) {
+  const cx0 = 320, cy = 292, bob = Math.sin(now * 0.0025) * 1.5, push = G ? G.chefPush : 0;
+  // a placing motion that goes out and back (0 -> 1 -> 0) while chefPush runs down
+  const r = push > 0 ? Math.sin((1 - push) * Math.PI) : 0;
+  const slot = G && G.chefSlot >= 0 ? G.chefSlot : 0, slotX = cx0 - 50 + slot * 20, right = slotX >= cx0;
+  const cx = cx0 + (right ? 1 : -1) * r * 3;   // a small lean toward the working hand
+  c.fillStyle = 'rgba(0,0,0,.22)'; c.beginPath(); c.ellipse(cx0, cy + 66, 70, 30, 0, 0, TAU); c.fill();
+  // cutting board with queued orders (under the arms, so the hands rest on it)
+  rr(c, cx0 - 64, cy + 92, 128, 44, 7); c.fillStyle = '#dcb67e'; c.fill(); c.strokeStyle = '#a77c45'; c.lineWidth = 2; c.stroke();
+  const q = G ? G.queue : [];
+  for (let i = 0; i < QUEUE_MAX; i++) {
+    const x = cx0 - 50 + i * 20, y = cy + 114;
+    if (q[i] !== undefined) drawPlate(c, q[i], x, y, 10);
+    else { c.strokeStyle = 'rgba(120,80,40,.3)'; c.lineWidth = 1.2; c.setLineDash([2, 3]); c.beginPath(); c.arc(x, y, 8, 0, TAU); c.stroke(); c.setLineDash([]); }
+  }
+  // arms: the hand nearer the slot reaches down to it, the other rests on the counter
+  c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 16; c.strokeStyle = '#ecebe6';
+  const restR = [cx + 50, cy + 88], restL = [cx - 50, cy + 88], aim = [slotX, cy + 108];
+  const mix = (p, q) => [p[0] + (q[0] - p[0]) * r, p[1] + (q[1] - p[1]) * r];
+  const tR = right ? mix(restR, aim) : restR, tL = right ? restL : mix(restL, aim);
+  const handR = chefArm(c, cx + 38, cy + 38, tR[0], tR[1], 40, -1);
+  const handL = chefArm(c, cx - 38, cy + 38, tL[0], tL[1], 40, 1);
+  // body
+  c.fillStyle = '#f4f2ec'; c.beginPath(); c.ellipse(cx, cy + 52, 60, 40, 0, 0, TAU); c.fill();
+  c.strokeStyle = '#26304f'; c.lineWidth = 6; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(cx - 17, cy + 20); c.lineTo(cx + 4, cy + 52); c.moveTo(cx + 17, cy + 20); c.lineTo(cx - 2, cy + 46); c.stroke();
+  c.fillStyle = '#efc8a4';
+  for (const h of [handR, handL]) { c.beginPath(); c.arc(h[0], h[1], 8, 0, TAU); c.fill(); }
+  // head
+  const hy0 = cy + bob + r * 3;
+  c.fillStyle = '#efc8a4'; c.beginPath(); c.arc(cx, hy0, 31, 0, TAU); c.fill();
+  c.save(); c.beginPath(); c.arc(cx, hy0, 31, 0, TAU); c.clip();
+  c.fillStyle = '#1d1a1a'; c.fillRect(cx - 40, hy0 - 40, 80, 26);
+  c.fillStyle = '#f4f2ec'; c.fillRect(cx - 40, hy0 - 17, 80, 9);
+  c.fillStyle = '#2c3c74'; c.fillRect(cx - 40, hy0 - 14, 80, 3);
+  c.restore();
+  c.fillStyle = '#f4f2ec';
+  c.beginPath(); c.moveTo(cx + 28, hy0 - 14); c.lineTo(cx + 42, hy0 - 22); c.lineTo(cx + 40, hy0 - 10); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(cx + 28, hy0 - 12); c.lineTo(cx + 40, hy0 - 2); c.lineTo(cx + 31, hy0 - 3); c.closePath(); c.fill();
+  c.strokeStyle = '#2a1d14'; c.lineWidth = 3; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(cx - 15, hy0 - 3); c.lineTo(cx - 6, hy0 - 4); c.moveTo(cx + 6, hy0 - 4); c.lineTo(cx + 15, hy0 - 3); c.stroke();
+  c.lineWidth = 2.3;
+  for (const s of [-1, 1]) { c.beginPath(); c.arc(cx + s * 10, hy0 + 4, 3.4, Math.PI * 1.1, Math.PI * 1.9); c.stroke(); }
+  c.beginPath(); c.arc(cx, hy0 + 12, 7, Math.PI * 0.15, Math.PI * 0.85); c.stroke();
+}
+
+function render(now) {
+  const c = ctx;
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  if (staticLayer) c.drawImage(staticLayer, 0, 0);
+  c.setTransform(scale, 0, 0, scale, 0, 0);
+  const dist = G ? G.beltDist : now * 0.05;
+  // moving slats (period divides the loop so there is no seam)
+  const n = Math.round(L / 24), per = L / n;
+  c.save(); tracePath(c); c.lineWidth = BW - 8; c.setLineDash([3, per - 3]); c.lineDashOffset = -dist;
+  c.strokeStyle = 'rgba(70,82,102,.5)'; c.stroke(); c.restore();
+  if (!G) { drawChef(c, now); return; }
+  for (const p of G.plates) {
+    const pos = pathPos(p.s), k = Math.min(1, (G.t - p.born) / 0.22);
+    drawPlate(c, p.type, pos.x, pos.y, 17 * (0.4 + 0.6 * easeOut(k)));
+  }
+  for (const cu of G.customers) if (cu.state === 'arriving' || cu.state === 'waiting' || cu.state === 'leaving') drawCustomer(c, cu, now);
+  for (const f of G.flyers) {
+    const k = easeOut(f.t / 0.3);
+    drawPlate(c, f.type, f.x0 + (f.x1 - f.x0) * k, f.y0 + (f.y1 - f.y0) * k - Math.sin(k * Math.PI) * 16, 17 * (1 - 0.4 * k));
+  }
+  drawChef(c, now);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  for (const f of G.floats) {
+    const k = f.t / 1.1;
+    c.globalAlpha = 1 - k * k;
+    c.font = (f.big ? '600 18px' : '600 16px') + ' Mitr, sans-serif';
+    c.lineWidth = 4; c.strokeStyle = 'rgba(255,250,240,.9)'; c.strokeText(f.text, f.x, f.y - k * 26);
+    c.fillStyle = f.col; c.fillText(f.text, f.x, f.y - k * 26);
+  }
+  c.globalAlpha = 1;
+  if (G.cleared) {
+    c.font = '600 44px Mitr, sans-serif'; c.lineWidth = 8; c.strokeStyle = '#2a1d14'; c.fillStyle = '#c9f0b4';
+    c.strokeText('ผ่านด่าน!', 320, 230); c.fillText('ผ่านด่าน!', 320, 230);
+  }
+  if (G.over) {
+    const k = Math.min(1, (now - G.overT) / 400);
+    c.fillStyle = `rgba(200,50,30,${0.28 * k})`; c.fillRect(0, 0, V, V);
+    c.font = '600 44px Mitr, sans-serif'; c.lineWidth = 8; c.strokeStyle = '#2a1d14'; c.fillStyle = '#ffe9c4';
+    const msg = G.failReason === 'stuck' ? 'ทางตัน!' : 'ซูชิค้างเต็ม!';
+    c.strokeText(msg, 320, 230); c.fillText(msg, 320, 230);
+  }
+}
+
+// ---------- HUD ----------
+let hudCache = {};
+function syncHud() {
+  if (!G) return;
+  const set = (k, v, fn) => { if (hudCache[k] !== v) { hudCache[k] = v; fn(v); } };
+  const lim = G.cfg.limit;
+  set('level', G.cfg.n, v => $('level').textContent = v);
+  set('score', G.score, v => $('score').textContent = v.toLocaleString());
+  set('served', G.sushi + '/' + G.total, v => $('served').textContent = v.replace('/', ' / '));
+  set('nq', G.spawned + '/' + G.roster.length, () => {
+    const box = $('nqItems'); box.innerHTML = '';
+    const next = G.roster.slice(G.spawned, G.spawned + 4);
+    if (!next.length) { box.textContent = 'ไม่มีลูกค้ารอแล้ว'; return; }
+    next.forEach((r, i) => {
+      const it = r.order[0], el = document.createElement('span');
+      el.className = 'nq' + (i === 0 ? ' first' : '');
+      el.innerHTML = '<canvas width="48" height="48"></canvas>×' + it.count;
+      const c = el.querySelector('canvas').getContext('2d'); c.scale(2, 2); drawPlate(c, it.type, 12, 12, 11, false);
+      el.setAttribute('aria-label', TYPES[it.type].name + ' ' + it.count + ' ชิ้น');
+      box.appendChild(el);
+    });
+  });
+  const n = G.idle || 0, cap = G.cap;
+  set('belt', n + '/' + cap, () => {
+    const lim = cap;
+    $('beltTxt').textContent = n + ' / ' + lim;
+    $('beltFill').style.width = Math.min(100, n / lim * 100) + '%';
+    const m = $('meter'); m.classList.toggle('danger', n >= lim - 2); m.classList.toggle('warn', n >= lim * 0.6 && n < lim - 2);
+  });
+  set('goal', G.helps, () => {
+    $('starGoal').innerHTML = G.helps === 0 ? '<b>★★★</b> ผ่านโดยไม่ใช้ตัวช่วย = 3 ดาว'
+      : `<b>${'★'.repeat(starsFor(G.helps))}</b> ใช้ตัวช่วยแล้ว ${G.helps} ครั้ง`;
+  });
+  set('spare', G.spare.join() + '|' + G.armed, () => syncHelper());
+  syncTray();
+}
+
+// ---------- loop ----------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (running && G && !G.over) update(dt);
+  render(now);
+  syncHud();
+  requestAnimationFrame(frame);
+}
+
+// ---------- leaderboard ----------
+// Shared board through the artifact's db when this view can reach it; otherwise a board kept on this device.
+// Each player owns one document, scores/<their id>, holding their best run.
+// SCORE_URL: the Apps Script Web app URL of the leaderboard sheet (see leaderboard/SETUP.md). Empty = no online board.
+const SCORE_URL = 'https://script.google.com/macros/s/AKfycbyC1GFdwOMSlnmnqwqeo4xbgH42nrXRZwrYBbcBKoW0pAAXitUSYQoC5I0MUAAJQNujmw/exec';
+const NAME_KEY = 'sushibelt-name', LOCAL_BOARD_KEY = 'sushibelt-board', SENT_KEY = 'sushibelt-sent', DEVICE_KEY = 'sushibelt-device', BOARD_CACHE_KEY = 'sushibelt-board-cache';
+function deviceId() {
+  let id = readLS(DEVICE_KEY, '');
+  if (!/^[a-z0-9]{12,40}$/i.test(id)) {
+    const b = new Uint8Array(12); (crypto.getRandomValues ? crypto.getRandomValues(b) : b.forEach((_, i) => b[i] = Math.random() * 256));
+    id = Array.from(b, x => (x % 36).toString(36)).join('') + Date.now().toString(36);
+    writeLS(DEVICE_KEY, id);
+  }
+  return id;
+}
+const readLS = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return v == null ? d : v; } catch (e) { return d; } };
+const writeLS = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+function playerName() { const n = String(readLS(NAME_KEY, '') || '').trim(); return n || 'เชฟนิรนาม'; }
+function playerStats() {
+  let level = 0, score = 0;
+  Object.keys(progress).forEach(k => { const n = +k; if (progress[k]) { level = Math.max(level, n); score += progress[k].score || 0; } });
+  return { level, score };
+}
+const Board = {
+  mode: 'local', canWrite: false, db: null, myId: null, rows: [], me: null, players: 0, online: null, busy: false,
+  async init() {
+    // the online board wins; offline at launch still counts as online-board mode, using the last list seen
+    const inClaude = !!(window.claude && typeof window.claude.use === 'function');
+    if (SCORE_URL && (await this.fetchRemote() || !inClaude)) {
+      this.mode = 'remote'; this.myId = deviceId();
+      if (!this.online) { const c = readLS(BOARD_CACHE_KEY, null); if (c) { this.rows = c.rows || []; this.me = c.me; this.players = c.players || 0; } }
+      addEventListener('online', () => this.refresh().then(() => this.sync()));
+      return this.sync();
+    }
+    try {
+      const cl = window.claude;
+      if (!cl || typeof cl.use !== 'function') return this.sync();
+      const [db, user] = await Promise.all([cl.use('db'), cl.use('user')]);
+      const id = db && user ? await user.id() : null;
+      if (!id) return this.sync();
+      this.db = db; this.myId = id; this.mode = 'shared';
+      this.canWrite = (await user.can('data.write')) !== false;
+      db.collection('scores').orderBy('level', 'desc').limit(300).onSnapshot(
+        snap => { this.rows = snap.docs.map(d => ({ id: d.id, ...(d.data() || {}) })); this.render(); },
+        () => { this.mode = 'local'; this.render(); });
+      this.sync();
+    } catch (e) { this.mode = 'local'; this.sync(); }
+  },
+  // online board: read the top list; false when the sheet can't be reached
+  async fetchRemote() {
+    try {
+      const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 8000);
+      const r = await fetch(SCORE_URL + '?id=' + encodeURIComponent(deviceId()), { signal: ctl.signal });
+      clearTimeout(timer);
+      const j = await r.json();
+      if (!j || !j.ok) throw new Error('bad reply');
+      this.rows = j.rows || []; this.me = j.me || null; this.players = j.players || 0; this.online = true;
+      writeLS(BOARD_CACHE_KEY, { rows: this.rows, me: this.me, players: this.players });
+      return true;
+    } catch (e) { this.online = false; return false; }
+  },
+  async refresh() { if (this.mode === 'remote') { await this.fetchRemote(); this.render(); } },
+  // record this device's best under the current name, then send it wherever the board lives.
+  // An unsent best stays in SENT_KEY's gap and goes out on the next sync (start, clear, back online).
+  async sync() {
+    const s = playerStats(), name = playerName();
+    if (!s.level) return this.render();
+    const local = readLS(LOCAL_BOARD_KEY, {});
+    local[name] = { name, level: s.level, score: s.score };
+    writeLS(LOCAL_BOARD_KEY, local);
+    const sent = readLS(SENT_KEY, null);
+    const fresh = !sent || sent.name !== name || sent.level !== s.level || sent.score !== s.score;
+    if (this.mode === 'remote' && fresh && !this.busy) {
+      this.busy = true;
+      try {
+        const r = await fetch(SCORE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ id: deviceId(), name: name.slice(0, 16), level: s.level, score: s.score }) });
+        const j = await r.json();
+        if (j && j.ok) writeLS(SENT_KEY, { name, level: s.level, score: s.score });
+        else if (j && j.retry) setTimeout(() => this.sync(), 9000);
+        await this.fetchRemote();
+      } catch (e) { this.online = false; }
+      this.busy = false;
+    } else if (this.mode === 'shared' && this.canWrite && fresh) {
+      try {
+        await this.db.doc('scores/' + this.myId).set({ name: name.slice(0, 16), level: s.level, score: s.score, at: new Date().toISOString() });
+        writeLS(SENT_KEY, { name, level: s.level, score: s.score });
+      } catch (e) { if (e && e.code === 'invalid_argument') this.canWrite = false; }
+    }
+    this.render();
+  },
+  list() {
+    if (this.mode === 'remote' && this.rows.length) return this.rows.slice();
+    const src = this.mode === 'shared' ? this.rows : Object.values(readLS(LOCAL_BOARD_KEY, {})).map(r => ({ ...r, id: 'local:' + r.name }));
+    return src.filter(r => typeof r.level === 'number').sort((a, b) => b.level - a.level || (b.score || 0) - (a.score || 0));
+  },
+  isMe(r) { return this.mode === 'remote' && 'me' in r ? !!r.me : this.mode === 'shared' ? r.id === this.myId : r.name === playerName(); },
+  render() {
+    const rows = this.list(), box = $('boardList');
+    const unsent = (() => { const st = playerStats(), sn = readLS(SENT_KEY, null); return st.level && (!sn || sn.level !== st.level || sn.score !== st.score); })();
+    $('bMode').textContent = this.mode === 'remote'
+      ? (this.online ? `อันดับออนไลน์ของผู้เล่นทุกคน (${this.players.toLocaleString()} คน)` : 'ต่อเน็ตไม่ได้ แสดงอันดับล่าสุดที่โหลดไว้') + (unsent ? ' · คะแนนล่าสุดของคุณจะส่งเมื่อออนไลน์' : '')
+      : this.mode === 'shared'
+      ? (this.canWrite ? 'อันดับรวมของทุกคนที่เล่นลิงก์นี้' : 'อันดับรวมของลิงก์นี้ บัญชีของคุณดูได้อย่างเดียว คะแนนของคุณเก็บไว้ในเครื่องนี้')
+      : 'อันดับในเครื่องนี้ (เปิดเกมผ่าน claude.ai และเข้าสู่ระบบเพื่อดูอันดับรวม)';
+    box.innerHTML = '';
+    if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'ยังไม่มีใครติดอันดับ ผ่านด่านแรกแล้วชื่อคุณจะขึ้นที่นี่'; box.appendChild(li); }
+    rows.slice(0, 50).forEach((r, i) => {
+      const li = document.createElement('li'); if (this.isMe(r)) li.className = 'me';
+      const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = i + 1;
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = String(r.name || 'เชฟนิรนาม').slice(0, 16);
+      const lv = document.createElement('span'); lv.className = 'lvl'; lv.textContent = 'ด่าน ' + r.level;
+      const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = (r.score || 0).toLocaleString();
+      li.append(rk, nm, lv, sc); box.appendChild(li);
+    });
+    const s = playerStats();
+    let myRank = rows.findIndex(r => this.isMe(r));
+    if (myRank < 0 && this.mode === 'remote' && this.me && this.me.rank) myRank = this.me.rank - 1;
+    $('bMe').textContent = s.level ? `${playerName()}: ผ่านถึงด่าน ${s.level} · ${s.score.toLocaleString()} คะแนน` + (myRank >= 0 ? ` · อันดับ ${myRank + 1}` : '') : 'ผ่านด่านแรกเพื่อขึ้นตารางอันดับ';
+  },
+};
+
+// ---------- rewarded ad (placeholder) ----------
+// No ad network is connected yet. showRewarded() resolves true only when the viewer has earned the reward.
+// To go live, replace the body with your ad SDK's rewarded-ad call and keep the same promise contract.
+const Ads = {
+  seconds: 5,
+  showRewarded() {
+    return new Promise(resolve => {
+      const ov = $('ovAd'), claim = $('btnAdClaim'), skip = $('btnAdSkip');
+      let left = this.seconds, timer = null;
+      const done = ok => { clearInterval(timer); ov.hidden = true; claim.onclick = skip.onclick = null; resolve(ok); };
+      const tick = () => {
+        $('adCount').textContent = left > 0 ? `รับรางวัลได้ใน ${left} วินาที` : 'ดูจบแล้ว กดรับโอกาสเล่นต่อได้เลย';
+        claim.disabled = left > 0;
+        if (left-- <= 0) clearInterval(timer);
+      };
+      ov.hidden = false; tick(); timer = setInterval(tick, 1000);
+      claim.onclick = () => done(true);
+      skip.onclick = () => done(false);
+      skip.focus();
+    });
+  },
+};
+// after a loss: one ad per level puts everything on the belt and board back on top of its column
+async function revive() {
+  if (!G || !G.over || G.revives >= 1) return;
+  $('ovResult').hidden = true;
+  const ok = await Ads.showRewarded();
+  if (!ok) { $('ovResult').hidden = false; return; }
+  const g = G;
+  g.revives++; g.helps++;
+  // latest first, so the earliest piece taken ends up on top again
+  const back = g.queue.map((t, i) => [t, g.queueLane[i]]).reverse()
+    .concat(g.plates.slice().sort((a, b) => b.born - a.born).map(p => [p.type, p.lane]));
+  back.forEach(([t, l]) => l >= 0 ? g.cols[l].unshift(t) : g.spare.unshift(t));
+  g.plates = []; g.queue = []; g.queueLane = []; g.flyers = [];
+  g.over = false; g.failReason = null; g.stuckT = 0; g.armed = -1;
+  traySig = ''; hudCache = {}; g.stuck = false; syncHelper();
+  running = true; last = performance.now();
+  showToast('ซูชิบนสายพานกลับเข้าแถวแล้ว ลองใหม่อีกครั้ง', 2600);
+}
+
+// ---------- screens ----------
+let selected = unlockedUpTo();
+function buildLevelGrid() {
+  const grid = $('levels'), top = unlockedUpTo();
+  selected = Math.min(selected, top);
+  grid.innerHTML = '';
+  for (let n = Math.max(1, top - 14); n <= top; n++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'lv' + (n === selected ? ' cur' : ''); b.id = 'lv-' + n;
+    const st = progress[n] ? progress[n].stars : 0;
+    b.innerHTML = n === top && !progress[n] ? `${n}<small>ใหม่</small>` : `${n}<small>${'★'.repeat(st)}<i>${'★'.repeat(3 - st)}</i></small>`;
+    b.setAttribute('aria-label', 'ด่าน ' + n + (progress[n] ? ' ได้ ' + st + ' ดาว' : ' ยังไม่เคยผ่าน'));
+    b.addEventListener('click', () => { selected = n; buildLevelGrid(); });
+    grid.appendChild(b);
+  }
+  const cfg = levelCfg(selected);
+  const rules = levelRules(cfg);
+  $('lvInfo').textContent = `ด่าน ${selected}: ลูกค้า ${cfg.target} คน · ` + rules.join(' · ') + ` · ค้างได้ไม่เกิน ${cfg.limit - 2} ชิ้น`;
+  $('btnStart').textContent = 'เริ่มด่าน ' + selected;
+}
+function start(n = selected) {
+  selected = n;
+  ['ovStart', 'ovResult', 'ovPause', 'ovIntro'].forEach(id => $(id).hidden = true);
+  const intro = INTROS[n];
+  if (intro && !seenIntro[intro.key]) {
+    seenIntro[intro.key] = true;
+    try { localStorage.setItem('sushibelt-seen-v2', JSON.stringify(seenIntro)); } catch (e) {}
+    $('iEyebrow').textContent = 'ด่าน ' + n + ' · กติกาใหม่';
+    $('iTitle').textContent = intro.title; $('iText').textContent = intro.text;
+    $('ovIntro').hidden = false; $('btnIntroGo').focus();
+    return;
+  }
+  // building a checked puzzle can take a moment; let the message paint first
+  showToast('กำลังจัดซูชิลงแถว…', 1500);
+  setTimeout(() => { newGame(n); running = true; last = performance.now(); }, 40); tone(1, 0.01, 'sine', 0.0001);
+}
+function pause() { if (!running || !G || G.over || G.cleared) return; running = false; $('ovPause').hidden = false; $('btnResume').focus(); }
+function resume() { if (!G || G.over || G.cleared) return; $('ovPause').hidden = true; running = true; last = performance.now(); }
+function toMenu() { ['ovResult', 'ovPause', 'ovIntro'].forEach(id => $(id).hidden = true); running = false; G = null; buildLevelGrid(); $('ovStart').hidden = false; }
+$('btnStart').addEventListener('click', () => start());
+$('btnIntroGo').addEventListener('click', () => start(selected));
+$('btnNext').addEventListener('click', () => start(G.cfg.n + 1));
+$('btnRetry').addEventListener('click', () => start(G.cfg.n));
+$('btnLevels').addEventListener('click', toMenu);
+$('btnRevive').addEventListener('click', revive);
+const openBoard = () => { Board.render(); Board.refresh(); $('ovBoard').hidden = false; $('btnBoardClose').focus(); };
+$('btnBoard').addEventListener('click', openBoard);
+$('btnBoard2').addEventListener('click', openBoard);
+$('btnBoardClose').addEventListener('click', () => { $('ovBoard').hidden = true; });
+$('pname').value = readLS(NAME_KEY, '') || '';
+$('pname').addEventListener('change', () => { writeLS(NAME_KEY, $('pname').value.trim().slice(0, 16)); Board.sync(); });
+$('btnQuit').addEventListener('click', toMenu);
+$('btnResume').addEventListener('click', resume);
+$('btnPause').addEventListener('click', () => running ? pause() : resume());
+$('btnFast').addEventListener('click', () => setFast(!fast));
+$('btnHint').addEventListener('click', useHelper);
+document.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const dig = /^Digit([1-5])$/.exec(e.code);
+  if (dig) { e.preventDefault(); tapLane(+dig[1] - 1); }
+  else if (e.key === 'f' || e.key === 'F') setFast(!fast);
+  else if (e.key === 'h' || e.key === 'H') useHelper();
+  else if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') { if (running) pause(); else if (G && !G.over && !$('ovPause').hidden) resume(); }
+  else if (e.key === 'Enter' && !$('ovStart').hidden && document.activeElement === document.body) start();
+});
+document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
+window.addEventListener('resize', layout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { buildStatic(); });
+buildLevelGrid();
+Board.init();
+
+if (location.hash === '#debug') window.__sushi = { get G() { return G; }, Board, idleCount, modelNow, useHelper, tapSpare, buildLevel, levelCfg, genSolve, genGreedyRate, tapLane, wantNow, tapSize, laneRisk, setFast, start, step(sec) { for (let i = 0; i < sec * 60 && running && G && !G.over; i++) update(1 / 60); render(performance.now()); syncHud(); } };
+
+layout();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
