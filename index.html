@@ -2,7 +2,15 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="เชฟซูชิ">
+<meta name="theme-color" content="#1c2540">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
 <title>เชฟซูชิสายพาน</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +42,8 @@ body{
 }
 #app{
   box-sizing:border-box;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:max(10px,env(safe-area-inset-top,0px));padding-bottom:max(10px,env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
 }
 #side{display:contents}
 #hud{order:0}
@@ -119,6 +128,13 @@ body{
 .eyebrow{font-size:12px;letter-spacing:.3em;color:#9a6b3a;margin:0}
 .card h1,.card h2{font-family:var(--f-display);font-weight:600;margin:2px 0 10px;line-height:1.15;text-wrap:balance}
 .card h1{font-size:34px}
+.homeTip{position:relative;margin:0 0 14px;padding:10px 34px 10px 12px;border-radius:12px;background:#fff6e3;border:1.5px solid #e9c98d}
+.homeTip p{margin:0;font-size:13.5px;line-height:1.5}
+.homeTip svg{width:16px;height:16px;vertical-align:-3px;color:#2f6fd6}
+.tipX{position:absolute;top:4px;right:4px;width:30px;height:30px;border:0;background:none;font-size:20px;line-height:1;color:#7a5530;cursor:pointer}
+#btnFull .fx{display:none}
+#btnFull.on .fx{display:block}
+#btnFull.on .fo{display:none}
 .card h2{font-size:28px}
 .card ol{margin:0 0 14px;padding-left:20px;font-size:14.5px;line-height:1.55}
 .card ol li+li{margin-top:3px}
@@ -201,6 +217,7 @@ body{
         <button class="icon" id="btnSound" aria-label="ปิดเสียง"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path id="sndWave" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12"/><path id="sndOff" d="M16 9l6 6M22 9l-6 6" hidden/></svg></button>
         <button class="icon" id="btnFast" aria-label="เร่งสายพาน" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 6l8 6-8 6zM12 6l8 6-8 6z"/></svg><span class="fx">×2</span></button>
         <button class="icon" id="btnHint" aria-label="ตัวช่วย: เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-4 12.7V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.3A7 7 0 0 0 12 2zm-3 18h6v1a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/></svg>ช่วย<span class="hc"></span></button>
+        <button class="icon" id="btnFull" aria-label="เต็มจอ" hidden><svg class="fo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><svg class="fx" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button>
         <button class="icon" id="btnPause" aria-label="พักเกม"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>
       </div>
     </div>
@@ -213,6 +230,10 @@ body{
 
 <div class="overlay" id="ovStart">
   <div class="card">
+    <div class="homeTip" id="homeTip" hidden>
+      <p><b>เล่นเต็มจอ:</b> แตะปุ่มแชร์ <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l-4 4h3v8h2V7h3z" fill="currentColor"/><path d="M6 10h2v9h8v-9h2v11H6z" fill="currentColor"/></svg> ด้านล่าง แล้วเลือก "เพิ่มไปยังหน้าจอโฮม" จากนั้นเปิดเกมจากไอคอน<span id="homeTipAcct"></span></p>
+      <button class="tipX" id="btnTipX" type="button" aria-label="ปิดคำแนะนำ">×</button>
+    </div>
     <p class="eyebrow">回転寿司 · KAITEN</p>
     <h1>เชฟซูชิสายพาน</h1>
     <ol>
@@ -1081,28 +1102,29 @@ function drawCustomer(c, cu, now) {
   else if (happy) { c.fillStyle = '#8a2f2a'; c.beginPath(); c.arc(fx, fy + 8, 5.5, 0, Math.PI); c.closePath(); c.fill(); }
   else { c.beginPath(); c.arc(fx, fy + 7, 4, Math.PI * 0.2, Math.PI * 0.8); c.stroke(); }
   if (happy || eating) { c.fillStyle = 'rgba(240,110,110,.35)'; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(fx + s * 12, fy + 8, 3.5, 2.2, 0, 0, TAU); c.fill(); } }
-  // order chip
-  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 94 : 82, x0 = cx - w / 2;
-  // bigger on small boards; never wider than the space between seats
-  const ck = Math.min(108 / w, 1.3, Math.max(1, 440 / (V * scale / dpr)));
-  c.translate(cx, cy); c.scale(ck, ck); c.translate(-cx, -cy);
-  rr(c, x0, cy - 20, w, 40, 20); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
-  c.strokeStyle = cu.wild ? '#e0532f' : 'rgba(42,29,20,.18)'; c.lineWidth = cu.wild ? 2 : 1.2; c.stroke();
+  // order chip: the wanted sushi as large as the space between seats allows, the count beside it,
+  // and the order after this one as a small badge on the corner that faces the middle of the board
+  const multi = waiting && cu.order.length > 1, w = 106, h = 60;
+  const cx = st.chx, cy = st.chy + (st.side === 'B' ? -4 : st.side === 'T' ? 2 : 0), x0 = cx - w / 2;
+  rr(c, x0, cy - h / 2, w, h, 20); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
+  c.strokeStyle = cu.wild ? '#e0532f' : 'rgba(42,29,20,.18)'; c.lineWidth = cu.wild ? 2.5 : 1.5; c.stroke();
   c.textAlign = 'center'; c.textBaseline = 'middle';
   if (waiting) {
-    const cur = cu.order[0];
-    // the wanted sushi itself, large, without a plate
-    const sx = x0 + (multi ? 23 : 25);
-    if (cur.type < 0) drawWildPlate(c, sx, cy, 16);
-    else { c.save(); c.translate(sx, cy + 1); c.scale(0.8, 0.8); SUSHI[cur.type](c); c.restore(); }
-    c.fillStyle = '#2a1d14'; c.font = '600 22px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + (multi ? 55 : 60), cy + 1);
+    const cur = cu.order[0], sx = x0 + 32;
+    if (cur.type < 0) drawWildPlate(c, sx, cy, 22);
+    else { c.save(); c.translate(sx, cy + 2); c.scale(1.35, 1.35); SUSHI[cur.type](c); c.restore(); }
+    c.fillStyle = '#2a1d14'; c.font = '600 28px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + 88, cy + 1);
     if (multi) {
-      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 72, cy);
-      drawPlate(c, cu.order[1].type, x0 + 83, cy, 8.5, false);
-      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 90, cy - 13); }
+      const bx = st.side === 'R' ? x0 + 4 : x0 + w - 4, by = cy - h / 2 + 2;
+      c.fillStyle = '#2a1d14'; c.beginPath(); c.arc(bx, by, 13, 0, TAU); c.fill();
+      drawPlate(c, cu.order[1].type, bx, by, 10.5, false);
+      if (cu.order.length > 2) {
+        c.fillStyle = '#2a1d14'; c.beginPath(); c.arc(bx + (st.side === 'R' ? -12 : 12), by + 9, 7.5, 0, TAU); c.fill();
+        c.fillStyle = '#ffe9c4'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', bx + (st.side === 'R' ? -12 : 12), by + 9.5);
+      }
     }
   } else {
-    c.font = '600 17px Mitr, sans-serif'; c.fillStyle = '#3f8f4f';
+    c.font = '600 24px Mitr, sans-serif'; c.fillStyle = '#3f8f4f';
     c.fillText('อิ่ม!', cx, cy + 1);
   }
   c.restore();
@@ -1442,8 +1464,23 @@ const usesLogin = !!SCORE_URL;
 function account() { const a = readLS(ACCOUNT_KEY, null); return a && a.name ? a : null; }
 const compactProgress = () => { const o = {}; Object.keys(progress).forEach(k => { const p = progress[k]; if (p) o[k] = [p.stars || 0, p.score || 0]; }); return o; };
 let loginMode = false;   // first visit: false = new player (name only), true = continue with name + PIN
+// how this page is open: iPhone Safari gets the home-screen tip, Android and computers get a full-screen button
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+let framed = true; try { framed = window.top !== window.self; } catch (e) {}
+const TIP_KEY = 'sushibelt-hometip-off';
+function renderTip() {
+  const show = isIOS && !standalone && !framed && !readLS(TIP_KEY, false);
+  $('homeTip').hidden = !show;
+  if (!show) return;
+  const a = usesLogin ? account() : null;
+  $('homeTipAcct').textContent = !a ? ''
+    : a.pin !== false ? ` · ในไอคอนกด "เคยเล่นแล้ว" แล้วใส่ชื่อ ${a.name} กับ PIN ด่านจะตามไป`
+    : ` · ด่านในนี้จะตามไปด้วย ถ้าตั้ง PIN ก่อน (ปุ่ม "ตั้งค่า") แล้วในไอคอนกด "เคยเล่นแล้ว"`;
+}
 function renderAccount() {
   const a = usesLogin ? account() : null;
+  renderTip();
   $('loginBox').hidden = !!a; $('acctBox').hidden = !a;
   $('pinRow').hidden = !(usesLogin && loginMode);
   $('btnHaveAcct').hidden = !usesLogin;
@@ -1616,6 +1653,14 @@ $('btnMergeOpen').addEventListener('click', () => {
   if (open) $('mergeName').focus();
 });
 $('btnRename').addEventListener('click', doRename);
+$('btnTipX').addEventListener('click', () => { writeLS(TIP_KEY, true); renderTip(); });
+if (document.fullscreenEnabled && !isIOS && !standalone) {
+  const fb = $('btnFull'), sync = () => { const on = !!document.fullscreenElement; fb.classList.toggle('on', on); fb.setAttribute('aria-label', on ? 'ออกจากเต็มจอ' : 'เต็มจอ'); };
+  fb.hidden = false;
+  fb.addEventListener('click', () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); });
+  document.addEventListener('fullscreenchange', () => { sync(); layout(); });
+  sync();
+}
 $('btnSetPin').addEventListener('click', doSetPin);
 $('btnMerge').addEventListener('click', doMerge);
 renderAccount();
@@ -1635,6 +1680,10 @@ document.addEventListener('keydown', e => {
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 window.addEventListener('resize', layout);
+// A game screen never zooms: iPhone Safari pinch (gesture events) and two-finger moves are blocked,
+// so a stray pinch can't leave the board zoomed in with no way back.
+['gesturestart', 'gesturechange', 'gestureend'].forEach(t => document.addEventListener(t, e => e.preventDefault(), { passive: false }));
+document.addEventListener('touchmove', e => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { buildStatic(); });
 buildLevelGrid();
 Board.init();

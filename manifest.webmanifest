@@ -1,0 +1,17 @@
+{
+  "name": "เชฟซูชิสายพาน",
+  "short_name": "เชฟซูชิ",
+  "description": "เกมพัซเซิลซูชิสายพาน เสิร์ฟให้ครบโดยไม่ให้ซูชิค้างเต็มสายพาน",
+  "lang": "th",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1c2540",
+  "theme_color": "#1c2540",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
