@@ -29,7 +29,7 @@ html,body{height:100%}
 [hidden]{display:none !important}
 body{
   margin:0;background:var(--noren);color:var(--ink);font-family:var(--f-body);
-  overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;
+  overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation;
   background-image:radial-gradient(120% 80% at 50% 0%, #26315a 0%, var(--noren) 55%, var(--noren-deep) 100%);
 }
 #app{
@@ -141,6 +141,9 @@ body{
 .nameRow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:600}
 .nameRow input{flex:1;min-width:0;border:2px solid rgba(42,29,20,.2);border-radius:10px;padding:8px 10px;font:inherit;font-weight:500;background:rgba(255,255,255,.6);color:var(--soy)}
 .nameRow input:focus-visible{outline:3px solid #ffd27a;outline-offset:1px}
+.nameRow input{font-size:16px}
+.recent{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 10px;font-size:12px;color:#7a5530}
+.recent button{border:1.5px solid rgba(42,29,20,.25);background:rgba(255,255,255,.55);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;font-weight:600;color:var(--soy);cursor:pointer;touch-action:manipulation}
 .nameRow{margin:4px 0 10px}
 .nameRow input.bad{border-color:var(--shu);background:#fff1ec}
 .nameErr{margin:-4px 0 10px;font-size:12.5px;font-weight:600;color:#b23a1d}
@@ -223,6 +226,7 @@ body{
     <div id="loginBox">
       <div class="nameRow"><label for="pname">ชื่อของคุณ</label><input id="pname" maxlength="16" placeholder="ตั้งชื่อก่อนเริ่มเล่น" autocomplete="nickname" enterkeyhint="next" aria-describedby="nameErr" required></div>
       <div class="nameRow" id="pinRow"><label for="ppin">PIN 4 หลัก</label><input id="ppin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="go" aria-describedby="pinHint nameErr"></div>
+      <div class="recent" id="recent" hidden></div>
       <p class="nameHint" id="pinHint">ผู้เล่นใหม่: ตั้งชื่อและ PIN · เคยเล่นแล้ว: ใส่ชื่อและ PIN เดิม เล่นต่อได้ทุกเครื่อง เข้าครั้งเดียว เครื่องจะจำไว้</p>
       <p class="nameErr" id="nameErr" role="alert" hidden></p>
     </div>
@@ -1416,8 +1420,23 @@ const validName = n => !!n && n !== 'เชฟนิรนาม';
 const usesLogin = !!SCORE_URL;
 function account() { const a = readLS(ACCOUNT_KEY, null); return a && a.name ? a : null; }
 const compactProgress = () => { const o = {}; Object.keys(progress).forEach(k => { const p = progress[k]; if (p) o[k] = [p.stars || 0, p.score || 0]; }); return o; };
+const RECENT_KEY = 'sushibelt-recent-names';
+function rememberName(n) { const l = readLS(RECENT_KEY, []).filter(x => x !== n); l.unshift(n); writeLS(RECENT_KEY, l.slice(0, 5)); }
+function renderRecent() {
+  const box = $('recent'), list = usesLogin ? readLS(RECENT_KEY, []).filter(validName) : [];
+  box.hidden = !list.length; box.innerHTML = '';
+  if (!list.length) return;
+  const lbl = document.createElement('span'); lbl.textContent = 'เคยเล่นในเครื่องนี้:'; box.appendChild(lbl);
+  list.forEach(n => {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = n;
+    b.setAttribute('aria-label', 'ใช้ชื่อ ' + n);
+    b.addEventListener('click', () => { $('pname').value = n; clearNameErr(); $('ppin').focus(); });
+    box.appendChild(b);
+  });
+}
 function renderAccount() {
   const a = usesLogin ? account() : null;
+  renderRecent();
   $('loginBox').hidden = !!a; $('acctBox').hidden = !a;
   $('pinRow').hidden = $('pinHint').hidden = !usesLogin;
   if (a) $('acctName').textContent = a.name;
@@ -1443,6 +1462,7 @@ const LOGIN_ERR = {
 let loggingIn = false;
 async function login() {
   const name = $('pname').value.trim().slice(0, 16), pin = $('ppin').value.trim();
+  if (name === 'เชฟนิรนาม') return showNameErr('ใช้ชื่อ "เชฟนิรนาม" ไม่ได้ ตั้งชื่อของคุณเอง', 'pname');
   if (!validName(name)) return showNameErr('ตั้งชื่อก่อนเริ่มเล่น ชื่อนี้จะขึ้นในตารางอันดับ', 'pname');
   if (!/^\d{4}$/.test(pin)) return showNameErr('ตั้ง PIN เป็นตัวเลข 4 หลัก (ไว้ใช้เข้าเล่นจากเครื่องอื่น)', 'ppin');
   loggingIn = true; clearNameErr();
@@ -1458,6 +1478,7 @@ async function login() {
       return showNameErr(err === 'pin' && j.left > 0 ? `${msg} (ลองได้อีก ${j.left} ครั้ง)` : msg, err === 'taken' || err === 'bad name' ? 'pname' : 'ppin');
     }
     writeLS(DEVICE_KEY, j.id); writeLS(NAME_KEY, j.name); writeLS(ACCOUNT_KEY, { name: j.name }); writeLS(SENT_KEY, null);
+    rememberName(j.name);
     // levels and stars this account earned anywhere come back here
     Object.keys(j.progress || {}).forEach(k => {
       const e = j.progress[k], p = progress[k] || { stars: 0, score: 0 };
@@ -1480,7 +1501,8 @@ async function signOut() {
   const unsent = () => { const st = playerStats(), sn = readLS(SENT_KEY, null); return st.level && (!sn || sn.level !== st.level || sn.score !== st.score); };
   if (unsent()) { showToast('กำลังบันทึกคะแนนล่าสุด…', 1500); await Board.sync(); }
   if (unsent()) { showToast('ต่ออินเทอร์เน็ตก่อน เพื่อบันทึกคะแนนล่าสุด', 2600); return; }
-  if (!confirm(`ออกจากชื่อ ${a.name}?\nด่านและคะแนนบันทึกออนไลน์แล้ว กลับมาใส่ชื่อและ PIN เดิมได้ทุกเมื่อ`)) return;
+  if (!confirm(`ออกจากชื่อ ${a.name}?\nด่านและคะแนนบันทึกออนไลน์แล้ว กลับมาใส่ชื่อ "${a.name}" และ PIN เดิมได้ทุกเมื่อ`)) return;
+  rememberName(a.name);
   [ACCOUNT_KEY, NAME_KEY, DEVICE_KEY, SENT_KEY, BOARD_CACHE_KEY, LOCAL_BOARD_KEY, 'sushibelt-levels-v2'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
   progress = {}; selected = 1;
   Board.myId = deviceId(); Board.me = null;
@@ -1526,7 +1548,7 @@ const openBoard = () => { Board.render(); Board.refresh(); $('ovBoard').hidden =
 $('btnBoard').addEventListener('click', openBoard);
 $('btnBoard2').addEventListener('click', openBoard);
 $('btnBoardClose').addEventListener('click', () => { $('ovBoard').hidden = true; });
-$('pname').value = readLS(NAME_KEY, '') || '';
+$('pname').value = validName(String(readLS(NAME_KEY, '') || '').trim()) ? readLS(NAME_KEY, '') : '';
 $('pname').addEventListener('change', () => { if (!usesLogin) saveName(); });
 ['pname', 'ppin'].forEach(i => $(i).addEventListener('input', () => { if ($(i).value.trim()) clearNameErr(); }));
 $('ppin').addEventListener('input', () => { const v = $('ppin').value.replace(/\D/g, '').slice(0, 4); if (v !== $('ppin').value) $('ppin').value = v; });
