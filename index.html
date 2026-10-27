@@ -97,8 +97,8 @@ body{
 .lane{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0 6px;border-radius:12px;
   border:2px solid transparent;background:#8a5c36;color:#ffe9c4;cursor:pointer;touch-action:manipulation;font-family:var(--f-body);
   box-shadow:inset 0 -3px 0 rgba(0,0,0,.25);transition:transform .08s,border-color .15s}
-.lane canvas{width:100%;max-width:96px;height:auto;aspect-ratio:80/234}
-.lane .left{font-size:11.5px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.lane canvas{width:100%;max-width:96px;height:auto;aspect-ratio:80/234;max-height:var(--laneMax,none);object-fit:cover;object-position:top}
+.lane .left{font-size:11.5px;font-weight:600;line-height:1.1;min-height:1.1em;font-variant-numeric:tabular-nums}
 .lane .key{position:absolute;left:5px;top:3px;font-family:var(--f-display);font-size:10px;color:rgba(255,233,196,.5)}
 .lane.risk{border-color:var(--shu)}
 .lane.risk .left{color:#ffb39d}
@@ -484,7 +484,15 @@ function layout() {
   } else {
     const guess = Math.min(W, 680);
     hud.style.width = tray.style.width = $('nextq').style.width = guess + 'px';
-    const h = H - hud.offsetHeight - tray.offsetHeight - $('nextq').offsetHeight - 30;
+    tray.style.removeProperty('--laneMax');
+    const rest = () => H - hud.offsetHeight - tray.offsetHeight - $('nextq').offsetHeight - ($('spare').hidden ? 0 : $('spare').offsetHeight + 10) - 42;
+    let h = rest();
+    const want = Math.min(W, 680), lc = tray.querySelector('canvas');
+    if (h < want && lc) {
+      const ch = lc.getBoundingClientRect().height;
+      tray.style.setProperty('--laneMax', Math.max(110, Math.floor(ch - (want - h))) + 'px');
+      h = rest();
+    }
     size = Math.min(W, h, 680);
   }
   size = Math.max(220, Math.floor(size));
@@ -838,7 +846,9 @@ function syncHelper() {
   b.setAttribute('aria-label', 'ตัวช่วย: เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน' + (G.helps ? ` ใช้แล้ว ${G.helps} ครั้ง` : ''));
   b.classList.toggle('nudge', !!G.stuck);
   const box = $('spare'), items = $('spareItems');
+  const wasHidden = box.hidden;
   box.hidden = !G.spare.length;
+  if (wasHidden !== box.hidden && !app.classList.contains('wide')) layout();
   items.innerHTML = '';
   G.spare.forEach((t, i) => {
     const el = document.createElement('button');
@@ -1029,18 +1039,20 @@ function drawCustomer(c, cu, now) {
   else { c.beginPath(); c.arc(fx, fy + 7, 4, Math.PI * 0.2, Math.PI * 0.8); c.stroke(); }
   if (happy || eating) { c.fillStyle = 'rgba(240,110,110,.35)'; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(fx + s * 12, fy + 8, 3.5, 2.2, 0, 0, TAU); c.fill(); } }
   // order chip
-  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 98 : 74, x0 = cx - w / 2;
+  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 84 : 72, x0 = cx - w / 2;
+  const ck = Math.min(1.3, Math.max(1, 440 / (V * scale / dpr)));
+  c.translate(cx, cy); c.scale(ck, ck); c.translate(-cx, -cy);
   rr(c, x0, cy - 16, w, 32, 16); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
   c.strokeStyle = cu.wild ? '#e0532f' : 'rgba(42,29,20,.18)'; c.lineWidth = cu.wild ? 2 : 1.2; c.stroke();
   c.textAlign = 'center'; c.textBaseline = 'middle';
   if (waiting) {
     const cur = cu.order[0];
-    if (cur.type < 0) drawWildPlate(c, x0 + 20, cy, 12.5); else drawPlate(c, cur.type, x0 + 20, cy, 12.5, false);
-    c.fillStyle = '#2a1d14'; c.font = '600 19px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + 50, cy + 1);
+    if (cur.type < 0) drawWildPlate(c, x0 + 19, cy, 13); else drawPlate(c, cur.type, x0 + 19, cy, 13, false);
+    c.fillStyle = '#2a1d14'; c.font = '600 20px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + (multi ? 45 : 49), cy + 1);
     if (multi) {
-      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 67, cy);
-      drawPlate(c, cu.order[1].type, x0 + 81, cy, 8.5, false);
-      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 91, cy - 11); }
+      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 61, cy);
+      drawPlate(c, cu.order[1].type, x0 + 73, cy, 8.5, false);
+      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 81, cy - 11); }
     }
   } else {
     c.font = '600 17px Mitr, sans-serif'; c.fillStyle = '#3f8f4f';
