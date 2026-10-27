@@ -142,8 +142,14 @@ body{
 .nameRow input{flex:1;min-width:0;border:2px solid rgba(42,29,20,.2);border-radius:10px;padding:8px 10px;font:inherit;font-weight:500;background:rgba(255,255,255,.6);color:var(--soy)}
 .nameRow input:focus-visible{outline:3px solid #ffd27a;outline-offset:1px}
 .nameRow input{font-size:16px}
-.recent{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:-4px 0 10px;font-size:12px;color:#7a5530}
-.recent button{border:1.5px solid rgba(42,29,20,.25);background:rgba(255,255,255,.55);border-radius:999px;padding:5px 11px;font:inherit;font-size:13px;font-weight:600;color:var(--soy);cursor:pointer;touch-action:manipulation}
+.mini{flex:none;border:0;border-radius:10px;background:var(--soy);color:#ffe9c4;font:inherit;font-size:14px;font-weight:600;padding:10px 12px;cursor:pointer;touch-action:manipulation}
+.mini:disabled{opacity:.5;cursor:default}
+.link{border:0;background:none;padding:4px 2px;font:inherit;font-size:13px;font-weight:600;color:#9a4a22;text-decoration:underline;cursor:pointer;touch-action:manipulation}
+#btnHaveAcct,#btnMergeOpen{display:block;margin:-4px 0 12px;text-align:left}
+.acctPanel{margin:-6px 0 12px;padding:12px 12px 2px;border-radius:0 0 10px 10px;background:rgba(255,255,255,.28)}
+.acctPanel .nameRow{margin:0 0 10px}
+.acctMsg{margin:0 0 10px;font-size:12.5px;font-weight:600;color:#b23a1d}
+.acctMsg.ok{color:#3d7a35}
 .nameRow{margin:4px 0 10px}
 .nameRow input.bad{border-color:var(--shu);background:#fff1ec}
 .nameErr{margin:-4px 0 10px;font-size:12.5px;font-weight:600;color:#b23a1d}
@@ -151,7 +157,7 @@ body{
 .nameHint{margin:-4px 0 10px;font-size:12px;line-height:1.45;color:#7a5530}
 .acct{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.45);font-size:14px}
 .acct b{font-family:var(--f-display);font-weight:600}
-.acct .link{border:0;background:none;padding:4px 2px;font:inherit;font-size:13px;font-weight:600;color:#9a4a22;text-decoration:underline;cursor:pointer}
+
 .card .board{list-style:none;margin:0 0 10px;padding:0;max-height:min(50vh,360px);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .board li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.4);font-size:14px}
 .board li.me{background:var(--soy);color:#ffe9c4}
@@ -217,20 +223,34 @@ body{
       <li>ดูป้ายของลูกค้าที่นั่งอยู่และคิวถัดไปเอง ชิ้นที่ยังไม่มีใครรอจะวนค้างบนสายพาน ทุกด่านมีทางผ่าน แต่ต้องคิดว่าจะขุดแถวไหนก่อน</li>
       <li>เสิร์ฟครบทุกชิ้น = ผ่านด่าน ซูชิที่ยังไม่มีลูกค้าคนไหนรอค้างบนสายพานจนเต็มหลอด = ไม่ผ่าน ชิ้นที่กำลังวิ่งไปหาลูกค้าไม่นับ แตะเร็วได้เต็มที่</li>
       <li>ผ่านด่านโดยไม่ใช้ตัวช่วย = 3 ดาวเสมอ</li>
-      <li>เข้าครั้งแรกตั้งชื่อและ PIN 4 หลัก ครั้งต่อไปเล่นได้เลย เปิดจากเครื่องอื่นใส่ชื่อและ PIN เดิม ด่านและคะแนนตามไปด้วย</li>
+      <li>ตั้งชื่อครั้งเดียว เครื่องจะจำไว้ เปลี่ยนชื่อได้ในปุ่ม "ตั้งค่า" อยากเล่นต่อในเครื่องอื่น ให้ตั้ง PIN ไว้ แล้วในเครื่องใหม่กด "เคยเล่นแล้ว"</li>
       <li>ปุ่ม 💡 ช่วย (คีย์ H): เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน ไว้ให้แตะส่งใหม่ทีหลัง ใช้ 1 ครั้ง ได้ 2 ดาว ใช้มากกว่านั้น ได้ 1 ดาว (ดูโฆษณาเล่นต่อนับเป็นตัวช่วยด้วย)</li>
     </ol>
     <div class="limitLbl">เลือกด่าน (ด่านไม่มีวันหมด ผ่านแล้วเปิดด่านใหม่ต่อไปเรื่อยๆ)</div>
     <div class="levels" id="levels"></div>
     <p class="lvInfo" id="lvInfo"></p>
     <div id="loginBox">
-      <div class="nameRow"><label for="pname">ชื่อของคุณ</label><input id="pname" maxlength="16" placeholder="ตั้งชื่อก่อนเริ่มเล่น" autocomplete="nickname" enterkeyhint="next" aria-describedby="nameErr" required></div>
-      <div class="nameRow" id="pinRow"><label for="ppin">PIN 4 หลัก</label><input id="ppin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="go" aria-describedby="pinHint nameErr"></div>
-      <div class="recent" id="recent" hidden></div>
-      <p class="nameHint" id="pinHint">ผู้เล่นใหม่: ตั้งชื่อและ PIN · เคยเล่นแล้ว: ใส่ชื่อและ PIN เดิม เล่นต่อได้ทุกเครื่อง เข้าครั้งเดียว เครื่องจะจำไว้</p>
+      <div class="nameRow"><label for="pname">ชื่อของคุณ</label><input id="pname" maxlength="16" placeholder="ตั้งชื่อก่อนเริ่มเล่น" autocomplete="nickname" enterkeyhint="go" aria-describedby="pinHint nameErr" required></div>
+      <div class="nameRow" id="pinRow" hidden><label for="ppin">PIN 4 หลัก</label><input id="ppin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="go" aria-describedby="pinHint nameErr"></div>
+      <p class="nameHint" id="pinHint"></p>
       <p class="nameErr" id="nameErr" role="alert" hidden></p>
+      <button class="link" id="btnHaveAcct" type="button" hidden></button>
     </div>
-    <div class="acct" id="acctBox" hidden><span>เล่นในชื่อ <b id="acctName"></b></span><button class="link" id="btnSwitch" type="button">เปลี่ยนผู้เล่น</button></div>
+    <div id="acctBox" hidden>
+      <div class="acct"><span>เล่นในชื่อ <b id="acctName"></b></span><button class="link" id="btnAcctEdit" type="button" aria-expanded="false" aria-controls="acctPanel">ตั้งค่า</button></div>
+      <div class="acctPanel" id="acctPanel" hidden>
+        <div class="nameRow"><label for="newName">เปลี่ยนชื่อ</label><input id="newName" maxlength="16" placeholder="ชื่อใหม่" autocomplete="nickname" enterkeyhint="done"><button class="mini" id="btnRename" type="button">บันทึก</button></div>
+        <div class="nameRow"><label for="newPin" id="lblPin">ตั้ง PIN</label><input id="newPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="done" aria-describedby="pinState"><button class="mini" id="btnSetPin" type="button">บันทึก</button></div>
+        <p class="nameHint" id="pinState"></p>
+        <button class="link" id="btnMergeOpen" type="button" aria-expanded="false" aria-controls="mergeBox">เคยเล่นชื่ออื่นที่ตั้ง PIN ไว้? ย้ายมาเล่นชื่อนั้น</button>
+        <div id="mergeBox" hidden>
+          <div class="nameRow"><label for="mergeName">ชื่อ</label><input id="mergeName" maxlength="16" autocomplete="off" enterkeyhint="next"></div>
+          <div class="nameRow"><label for="mergePin">PIN</label><input id="mergePin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="go"><button class="mini" id="btnMerge" type="button">เข้า</button></div>
+          <p class="nameHint">ด่านและคะแนนของชื่อที่เล่นอยู่ตอนนี้จะรวมเข้าชื่อนั้น</p>
+        </div>
+        <p class="acctMsg" id="acctMsg" role="status" hidden></p>
+      </div>
+    </div>
     <button class="btn" id="btnStart">เริ่มด่าน 1</button>
     <button class="btn ghost" id="btnBoard">ตารางอันดับ</button>
   </div>
@@ -1416,30 +1436,27 @@ function buildLevelGrid() {
   $('btnStart').textContent = 'เริ่มด่าน ' + selected;
 }
 const validName = n => !!n && n !== 'เชฟนิรนาม';
-// With the online board, a player signs in once with name + PIN; the browser keeps the account id after that.
+// With the online board, a player picks a name once and the browser keeps the account id: no sign-out.
+// A PIN is optional; it lets the same player continue in another browser (another phone, or Safari vs. the home-screen icon).
 const usesLogin = !!SCORE_URL;
 function account() { const a = readLS(ACCOUNT_KEY, null); return a && a.name ? a : null; }
 const compactProgress = () => { const o = {}; Object.keys(progress).forEach(k => { const p = progress[k]; if (p) o[k] = [p.stars || 0, p.score || 0]; }); return o; };
-const RECENT_KEY = 'sushibelt-recent-names';
-function rememberName(n) { const l = readLS(RECENT_KEY, []).filter(x => x !== n); l.unshift(n); writeLS(RECENT_KEY, l.slice(0, 5)); }
-function renderRecent() {
-  const box = $('recent'), list = usesLogin ? readLS(RECENT_KEY, []).filter(validName) : [];
-  box.hidden = !list.length; box.innerHTML = '';
-  if (!list.length) return;
-  const lbl = document.createElement('span'); lbl.textContent = 'เคยเล่นในเครื่องนี้:'; box.appendChild(lbl);
-  list.forEach(n => {
-    const b = document.createElement('button'); b.type = 'button'; b.textContent = n;
-    b.setAttribute('aria-label', 'ใช้ชื่อ ' + n);
-    b.addEventListener('click', () => { $('pname').value = n; clearNameErr(); $('ppin').focus(); });
-    box.appendChild(b);
-  });
-}
+let loginMode = false;   // first visit: false = new player (name only), true = continue with name + PIN
 function renderAccount() {
   const a = usesLogin ? account() : null;
-  renderRecent();
   $('loginBox').hidden = !!a; $('acctBox').hidden = !a;
-  $('pinRow').hidden = $('pinHint').hidden = !usesLogin;
-  if (a) $('acctName').textContent = a.name;
+  $('pinRow').hidden = !(usesLogin && loginMode);
+  $('btnHaveAcct').hidden = !usesLogin;
+  $('btnHaveAcct').textContent = loginMode ? 'ผู้เล่นใหม่? ตั้งชื่ออย่างเดียวก็เล่นได้' : 'เคยเล่นแล้วและตั้ง PIN ไว้? เล่นต่อด้วยชื่อ + PIN';
+  $('pinHint').hidden = !usesLogin;
+  $('pinHint').textContent = loginMode ? 'ใส่ชื่อและ PIN ที่ตั้งไว้ ด่านและคะแนนจะตามมาที่นี่' : 'ตั้งชื่อครั้งเดียว เครื่องนี้จะจำไว้ เปลี่ยนชื่อทีหลังได้';
+  if (!a) return;
+  const hasPin = a.pin !== false;
+  $('acctName').textContent = a.name;
+  $('lblPin').textContent = hasPin ? 'เปลี่ยน PIN' : 'ตั้ง PIN';
+  $('pinState').textContent = hasPin
+    ? 'ตั้ง PIN แล้ว · เปิดเกมที่อื่น (มือถืออีกเครื่อง, Safari หรือไอคอนบนหน้าจอ) กด "เคยเล่นแล้ว" แล้วใส่ชื่อนี้กับ PIN'
+    : 'ยังไม่ได้ตั้ง PIN · ตั้งไว้ถ้าอยากเล่นต่อในเครื่องอื่น หรือเล่นทั้งใน Safari และไอคอนบนหน้าจอ';
 }
 function showNameErr(msg, field) {
   $('nameErr').textContent = msg; $('nameErr').hidden = false;
@@ -1449,71 +1466,103 @@ function showNameErr(msg, field) {
   return false;
 }
 function clearNameErr() { $('nameErr').hidden = true; ['pname', 'ppin'].forEach(i => $(i).classList.remove('bad')); }
+function acctMsg(msg, bad) { const el = $('acctMsg'); el.textContent = msg; el.hidden = !msg; el.classList.toggle('ok', !bad); return false; }
 function saveName() {
   const v = $('pname').value.trim().slice(0, 16);
   if (v !== (readLS(NAME_KEY, '') || '')) { writeLS(NAME_KEY, v); Board.sync(); }
   return v;
 }
-const LOGIN_ERR = {
-  pin: 'PIN ไม่ถูกต้อง', locked: 'ใส่ PIN ผิดหลายครั้ง รอ 10 นาทีแล้วลองใหม่',
-  taken: 'ชื่อนี้มีคนใช้แล้ว ถ้าเป็นชื่อของคุณ ให้เปิดเกมจากที่ที่เคยเล่นชื่อนี้ แล้วตั้ง PIN ที่นั่นก่อน',
-  'bad name': 'ตั้งชื่ออื่นที่ไม่ใช่ "เชฟนิรนาม"', 'bad pin': 'PIN ต้องเป็นตัวเลข 4 หลัก',
+const ERR = {
+  pin: 'PIN ไม่ถูกต้อง', locked: 'ใส่ PIN ผิดหลายครั้ง รอ 10 นาทีแล้วลองใหม่', taken: 'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น',
+  'bad name': 'ใช้ชื่อ "เชฟนิรนาม" ไม่ได้ ตั้งชื่อของคุณเอง', 'bad pin': 'PIN ต้องเป็นตัวเลข 4 หลัก',
+  nopin: 'ชื่อนี้ยังไม่ได้ตั้ง PIN ให้เปิดเกมที่เล่นชื่อนี้อยู่ กด "ตั้งค่า" แล้วตั้ง PIN ก่อน',
+  notfound: 'ไม่พบชื่อนี้ ลองตรวจตัวสะกดอีกครั้ง', noaccount: 'ไม่พบผู้เล่นของเครื่องนี้ ลองเปิดเกมใหม่',
+  offline: 'ต่ออินเทอร์เน็ตก่อน (ต้องใช้แค่ตอนตั้งหรือเปลี่ยนชื่อ)',
 };
-let loggingIn = false;
-async function login() {
-  const name = $('pname').value.trim().slice(0, 16), pin = $('ppin').value.trim();
-  if (name === 'เชฟนิรนาม') return showNameErr('ใช้ชื่อ "เชฟนิรนาม" ไม่ได้ ตั้งชื่อของคุณเอง', 'pname');
-  if (!validName(name)) return showNameErr('ตั้งชื่อก่อนเริ่มเล่น ชื่อนี้จะขึ้นในตารางอันดับ', 'pname');
-  if (!/^\d{4}$/.test(pin)) return showNameErr('ตั้ง PIN เป็นตัวเลข 4 หลัก (ไว้ใช้เข้าเล่นจากเครื่องอื่น)', 'ppin');
-  loggingIn = true; clearNameErr();
-  $('btnStart').disabled = true; $('btnStart').textContent = 'กำลังเข้าสู่ระบบ…';
+const errText = j => { const e = j && j.err, m = ERR[e] || 'ระบบตารางอันดับยังไม่พร้อม ลองใหม่อีกครั้งภายหลัง'; return e === 'pin' && j.left > 0 ? `${m} (ลองได้อีก ${j.left} ครั้ง)` : m; };
+async function api(body) {
+  const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
   try {
-    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
-    const r = await fetch(SCORE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctl.signal,
-      body: JSON.stringify({ action: 'login', name, pin, id: deviceId(), progress: compactProgress() }) });
-    clearTimeout(tm);
-    const j = await r.json();
-    if (!j || !j.ok || !j.id) {
-      const err = j && j.err, msg = LOGIN_ERR[err] || 'ระบบตารางอันดับยังไม่พร้อม ลองใหม่อีกครั้งภายหลัง';
-      return showNameErr(err === 'pin' && j.left > 0 ? `${msg} (ลองได้อีก ${j.left} ครั้ง)` : msg, err === 'taken' || err === 'bad name' ? 'pname' : 'ppin');
+    const r = await fetch(SCORE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctl.signal, body: JSON.stringify(body) });
+    return (await r.json()) || { ok: false };
+  } catch (e) { return { ok: false, err: 'offline' }; } finally { clearTimeout(tm); }
+}
+// the server answered with an account: this browser plays as it from now on, with its levels and stars
+function useAccount(j) {
+  writeLS(DEVICE_KEY, j.id); writeLS(NAME_KEY, j.name); writeLS(ACCOUNT_KEY, { name: j.name, pin: !!j.pin }); writeLS(SENT_KEY, null);
+  Object.keys(j.progress || {}).forEach(k => {
+    const e = j.progress[k], p = progress[k] || { stars: 0, score: 0 };
+    progress[k] = { stars: Math.max(p.stars || 0, +e[0] || 0), score: Math.max(p.score || 0, +e[1] || 0) };
+  });
+  try { localStorage.setItem('sushibelt-levels-v2', JSON.stringify(progress)); } catch (e) {}
+  Board.myId = j.id; renderAccount(); buildLevelGrid(); Board.sync();
+}
+let busy = false;
+async function enter() {
+  const name = $('pname').value.trim().slice(0, 16), pin = $('ppin').value.trim();
+  if (name === 'เชฟนิรนาม') return showNameErr(ERR['bad name'], 'pname');
+  if (!validName(name)) return showNameErr('ตั้งชื่อก่อนเริ่มเล่น ชื่อนี้จะขึ้นในตารางอันดับ', 'pname');
+  if (loginMode && !/^\d{4}$/.test(pin)) return showNameErr('ใส่ PIN 4 หลักที่ตั้งไว้', 'ppin');
+  busy = true; clearNameErr();
+  $('btnStart').disabled = true; $('btnStart').textContent = loginMode ? 'กำลังเข้าสู่ระบบ…' : 'กำลังบันทึกชื่อ…';
+  try {
+    const j = await api(loginMode ? { action: 'login', name, pin, id: deviceId(), progress: compactProgress() }
+                                  : { action: 'register', name, id: deviceId(), progress: compactProgress() });
+    if (!j.ok || !j.id) {
+      const msg = !loginMode && j.err === 'taken' ? 'ชื่อนี้มีคนใช้แล้ว ลองชื่ออื่น (ถ้าเป็นชื่อของคุณที่ตั้ง PIN ไว้ กด "เคยเล่นแล้ว" ด้านล่าง)' : errText(j);
+      return showNameErr(msg, j.err === 'offline' ? null : /^(pin|bad pin|locked)$/.test(j.err) ? 'ppin' : 'pname');
     }
-    writeLS(DEVICE_KEY, j.id); writeLS(NAME_KEY, j.name); writeLS(ACCOUNT_KEY, { name: j.name }); writeLS(SENT_KEY, null);
-    rememberName(j.name);
-    // levels and stars this account earned anywhere come back here
-    Object.keys(j.progress || {}).forEach(k => {
-      const e = j.progress[k], p = progress[k] || { stars: 0, score: 0 };
-      progress[k] = { stars: Math.max(p.stars || 0, +e[0] || 0), score: Math.max(p.score || 0, +e[1] || 0) };
-    });
-    try { localStorage.setItem('sushibelt-levels-v2', JSON.stringify(progress)); } catch (e) {}
-    Board.myId = j.id; $('ppin').value = ''; $('pname').value = j.name;
-    renderAccount(); buildLevelGrid();
+    $('ppin').value = ''; loginMode = false; useAccount(j);
     showToast(j.back ? `ยินดีต้อนรับกลับ ${j.name}` : `สวัสดี ${j.name} · เครื่องนี้จำชื่อไว้แล้ว`, 2400);
-    Board.sync();
     return j.back ? 'back' : 'new';
-  } catch (e) {
-    return showNameErr('ต่ออินเทอร์เน็ตก่อน (ใช้แค่ตอนเข้าครั้งแรก)', null);
   } finally {
-    loggingIn = false; $('btnStart').disabled = false; $('btnStart').textContent = 'เริ่มด่าน ' + selected;
+    busy = false; $('btnStart').disabled = false; $('btnStart').textContent = 'เริ่มด่าน ' + selected;
   }
 }
-async function signOut() {
-  const a = account(); if (!a) return;
-  const unsent = () => { const st = playerStats(), sn = readLS(SENT_KEY, null); return st.level && (!sn || sn.level !== st.level || sn.score !== st.score); };
-  if (unsent()) { showToast('กำลังบันทึกคะแนนล่าสุด…', 1500); await Board.sync(); }
-  if (unsent()) { showToast('ต่ออินเทอร์เน็ตก่อน เพื่อบันทึกคะแนนล่าสุด', 2600); return; }
-  if (!confirm(`ออกจากชื่อ ${a.name}?\nด่านและคะแนนบันทึกออนไลน์แล้ว กลับมาใส่ชื่อ "${a.name}" และ PIN เดิมได้ทุกเมื่อ`)) return;
-  rememberName(a.name);
-  [ACCOUNT_KEY, NAME_KEY, DEVICE_KEY, SENT_KEY, BOARD_CACHE_KEY, LOCAL_BOARD_KEY, 'sushibelt-levels-v2'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
-  progress = {}; selected = 1;
-  Board.myId = deviceId(); Board.me = null;
-  $('pname').value = ''; $('ppin').value = ''; clearNameErr();
-  renderAccount(); buildLevelGrid(); Board.refresh();
+async function doRename() {
+  const a = account(), n = $('newName').value.trim().slice(0, 16);
+  if (!a) return;
+  if (n === 'เชฟนิรนาม') return acctMsg(ERR['bad name'], true);
+  if (!validName(n)) { $('newName').focus(); return acctMsg('พิมพ์ชื่อใหม่ก่อน', true); }
+  if (n === a.name) return acctMsg('ชื่อนี้คือชื่อที่ใช้อยู่แล้ว', true);
+  $('btnRename').disabled = true;
+  const j = await api({ action: 'rename', id: deviceId(), name: n });
+  $('btnRename').disabled = false;
+  if (!j.ok) return acctMsg(errText(j), true);
+  writeLS(ACCOUNT_KEY, Object.assign({}, a, { name: j.name })); writeLS(NAME_KEY, j.name); writeLS(SENT_KEY, null);
+  $('newName').value = ''; renderAccount(); Board.refresh();
+  acctMsg(`เปลี่ยนชื่อเป็น ${j.name} แล้ว`, false);
+}
+async function doSetPin() {
+  const a = account(), pin = $('newPin').value.trim();
+  if (!a) return;
+  if (!/^\d{4}$/.test(pin)) { $('newPin').focus(); return acctMsg(ERR['bad pin'], true); }
+  $('btnSetPin').disabled = true;
+  const j = await api({ action: 'setpin', id: deviceId(), pin });
+  $('btnSetPin').disabled = false;
+  if (!j.ok) return acctMsg(errText(j), true);
+  writeLS(ACCOUNT_KEY, Object.assign({}, a, { pin: true })); $('newPin').value = ''; renderAccount();
+  acctMsg(a.pin !== false ? 'เปลี่ยน PIN แล้ว' : `ตั้ง PIN แล้ว จำชื่อ "${a.name}" กับ PIN นี้ไว้ ใช้เล่นต่อที่อื่น`, false);
+}
+async function doMerge() {
+  const a = account(), name = $('mergeName').value.trim().slice(0, 16), pin = $('mergePin').value.trim();
+  if (!a) return;
+  if (!validName(name)) { $('mergeName').focus(); return acctMsg('ใส่ชื่อที่ตั้ง PIN ไว้', true); }
+  if (!/^\d{4}$/.test(pin)) { $('mergePin').focus(); return acctMsg('ใส่ PIN 4 หลักของชื่อนั้น', true); }
+  if (name === a.name) return acctMsg('ตอนนี้ก็เล่นในชื่อนี้อยู่แล้ว', true);
+  $('btnMerge').disabled = true;
+  const j = await api({ action: 'login', name, pin, id: deviceId(), progress: compactProgress() });
+  $('btnMerge').disabled = false;
+  if (!j.ok || !j.id) return acctMsg(errText(j), true);
+  $('mergeName').value = ''; $('mergePin').value = ''; $('mergeBox').hidden = true; $('btnMergeOpen').setAttribute('aria-expanded', 'false');
+  useAccount(j);
+  acctMsg(`ตอนนี้เล่นในชื่อ ${j.name} แล้ว ด่านและคะแนนรวมกันแล้ว`, false);
 }
 function start(n = selected) {
   if (usesLogin) {
     if (!account()) {
-      // first visit on this browser: sign in, then go (a returning player first sees their levels)
-      if (!loggingIn) login().then(r => { if (r === 'new') start(n); });
+      // first visit on this browser: save the name (or sign in), then go; a returning player first sees their levels
+      if (!busy) enter().then(r => { if (r === 'new') start(n); });
       return;
     }
   } else if (!validName(saveName())) {
@@ -1551,10 +1600,24 @@ $('btnBoardClose').addEventListener('click', () => { $('ovBoard').hidden = true;
 $('pname').value = validName(String(readLS(NAME_KEY, '') || '').trim()) ? readLS(NAME_KEY, '') : '';
 $('pname').addEventListener('change', () => { if (!usesLogin) saveName(); });
 ['pname', 'ppin'].forEach(i => $(i).addEventListener('input', () => { if ($(i).value.trim()) clearNameErr(); }));
-$('ppin').addEventListener('input', () => { const v = $('ppin').value.replace(/\D/g, '').slice(0, 4); if (v !== $('ppin').value) $('ppin').value = v; });
-$('pname').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (usesLogin) $('ppin').focus(); else { $('pname').blur(); start(); } } });
-$('ppin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('ppin').blur(); start(); } });
-$('btnSwitch').addEventListener('click', signOut);
+['ppin', 'newPin', 'mergePin'].forEach(i => $(i).addEventListener('input', () => { const v = $(i).value.replace(/\D/g, '').slice(0, 4); if (v !== $(i).value) $(i).value = v; }));
+const onEnter = (id, fn) => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); fn(); } });
+onEnter('pname', () => { if (usesLogin && loginMode) $('ppin').focus(); else { $('pname').blur(); start(); } });
+onEnter('ppin', () => { $('ppin').blur(); start(); });
+onEnter('newName', doRename); onEnter('newPin', doSetPin);
+onEnter('mergeName', () => $('mergePin').focus()); onEnter('mergePin', doMerge);
+$('btnHaveAcct').addEventListener('click', () => { loginMode = !loginMode; clearNameErr(); renderAccount(); $(loginMode && $('pname').value.trim() ? 'ppin' : 'pname').focus(); });
+$('btnAcctEdit').addEventListener('click', () => {
+  const open = $('acctPanel').hidden; $('acctPanel').hidden = !open; $('btnAcctEdit').setAttribute('aria-expanded', String(open));
+  acctMsg('', false); if (open) $('acctPanel').scrollIntoView({ block: 'nearest' });
+});
+$('btnMergeOpen').addEventListener('click', () => {
+  const open = $('mergeBox').hidden; $('mergeBox').hidden = !open; $('btnMergeOpen').setAttribute('aria-expanded', String(open));
+  if (open) $('mergeName').focus();
+});
+$('btnRename').addEventListener('click', doRename);
+$('btnSetPin').addEventListener('click', doSetPin);
+$('btnMerge').addEventListener('click', doMerge);
 renderAccount();
 $('btnQuit').addEventListener('click', toMenu);
 $('btnResume').addEventListener('click', resume);
