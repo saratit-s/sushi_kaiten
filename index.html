@@ -141,6 +141,14 @@ body{
 .nameRow{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:600}
 .nameRow input{flex:1;min-width:0;border:2px solid rgba(42,29,20,.2);border-radius:10px;padding:8px 10px;font:inherit;font-weight:500;background:rgba(255,255,255,.6);color:var(--soy)}
 .nameRow input:focus-visible{outline:3px solid #ffd27a;outline-offset:1px}
+.nameRow{margin:4px 0 10px}
+.nameRow input.bad{border-color:var(--shu);background:#fff1ec}
+.nameErr{margin:-4px 0 10px;font-size:12.5px;font-weight:600;color:#b23a1d}
+.nameRow label{min-width:5.2em}
+.nameHint{margin:-4px 0 10px;font-size:12px;line-height:1.45;color:#7a5530}
+.acct{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.45);font-size:14px}
+.acct b{font-family:var(--f-display);font-weight:600}
+.acct .link{border:0;background:none;padding:4px 2px;font:inherit;font-size:13px;font-weight:600;color:#9a4a22;text-decoration:underline;cursor:pointer}
 .card .board{list-style:none;margin:0 0 10px;padding:0;max-height:min(50vh,360px);overflow-y:auto;display:flex;flex-direction:column;gap:4px}
 .board li{display:grid;grid-template-columns:2.2em minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.4);font-size:14px}
 .board li.me{background:var(--soy);color:#ffe9c4}
@@ -206,13 +214,20 @@ body{
       <li>ดูป้ายของลูกค้าที่นั่งอยู่และคิวถัดไปเอง ชิ้นที่ยังไม่มีใครรอจะวนค้างบนสายพาน ทุกด่านมีทางผ่าน แต่ต้องคิดว่าจะขุดแถวไหนก่อน</li>
       <li>เสิร์ฟครบทุกชิ้น = ผ่านด่าน ซูชิที่ยังไม่มีลูกค้าคนไหนรอค้างบนสายพานจนเต็มหลอด = ไม่ผ่าน ชิ้นที่กำลังวิ่งไปหาลูกค้าไม่นับ แตะเร็วได้เต็มที่</li>
       <li>ผ่านด่านโดยไม่ใช้ตัวช่วย = 3 ดาวเสมอ</li>
+      <li>เข้าครั้งแรกตั้งชื่อและ PIN 4 หลัก ครั้งต่อไปเล่นได้เลย เปิดจากเครื่องอื่นใส่ชื่อและ PIN เดิม ด่านและคะแนนตามไปด้วย</li>
       <li>ปุ่ม 💡 ช่วย (คีย์ H): เชฟเก็บซูชิที่ไม่มีใครรอออกจากสายพาน ไว้ให้แตะส่งใหม่ทีหลัง ใช้ 1 ครั้ง ได้ 2 ดาว ใช้มากกว่านั้น ได้ 1 ดาว (ดูโฆษณาเล่นต่อนับเป็นตัวช่วยด้วย)</li>
     </ol>
     <div class="limitLbl">เลือกด่าน (ด่านไม่มีวันหมด ผ่านแล้วเปิดด่านใหม่ต่อไปเรื่อยๆ)</div>
     <div class="levels" id="levels"></div>
     <p class="lvInfo" id="lvInfo"></p>
+    <div id="loginBox">
+      <div class="nameRow"><label for="pname">ชื่อของคุณ</label><input id="pname" maxlength="16" placeholder="ตั้งชื่อก่อนเริ่มเล่น" autocomplete="nickname" enterkeyhint="next" aria-describedby="nameErr" required></div>
+      <div class="nameRow" id="pinRow"><label for="ppin">PIN 4 หลัก</label><input id="ppin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="••••" autocomplete="off" enterkeyhint="go" aria-describedby="pinHint nameErr"></div>
+      <p class="nameHint" id="pinHint">ผู้เล่นใหม่: ตั้งชื่อและ PIN · เคยเล่นแล้ว: ใส่ชื่อและ PIN เดิม เล่นต่อได้ทุกเครื่อง เข้าครั้งเดียว เครื่องจะจำไว้</p>
+      <p class="nameErr" id="nameErr" role="alert" hidden></p>
+    </div>
+    <div class="acct" id="acctBox" hidden><span>เล่นในชื่อ <b id="acctName"></b></span><button class="link" id="btnSwitch" type="button">เปลี่ยนผู้เล่น</button></div>
     <button class="btn" id="btnStart">เริ่มด่าน 1</button>
-    <div class="nameRow"><label for="pname">ชื่อในตารางอันดับ</label><input id="pname" maxlength="16" placeholder="เชฟนิรนาม" autocomplete="nickname"></div>
     <button class="btn ghost" id="btnBoard">ตารางอันดับ</button>
   </div>
 </div>
@@ -437,16 +452,19 @@ function drawPiece(c, ti, x, y, size) {
 function drawLane(cvs, col, k, wanted) {
   const c = cvs.getContext('2d');
   c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, LANE_W, LANE_H);
-  const n = Math.min(col.length, LANE_SHOW);
+  // a short column (small phone screens) stacks the pieces closer so more of them stay in view
+  const r = cvs.getBoundingClientRect(), vis = r.width > 0 ? r.height / r.width * LANE_W : LANE_H;
+  const step = Math.max(21, Math.min(LANE_STEP, (vis - 46) / (LANE_SHOW - 1))), tight = step < LANE_STEP - 1;
+  const n = Math.min(col.length, LANE_SHOW, Math.floor((vis - 40) / step) + 1);
   // deepest first so each piece sits on top of the one below it
   for (let j = n - 1; j >= 0; j--) {
-    const y = 26 + j * LANE_STEP;
+    const y = 26 + j * step;
     if (j === 0) {
       c.beginPath(); c.ellipse(LANE_W / 2, y + 2, 37, 25, 0, 0, TAU);
       c.fillStyle = 'rgba(255,240,210,.22)'; c.fill();
     }
     c.globalAlpha = j === 0 ? 1 : Math.max(0.55, 0.95 - j * 0.07);
-    drawPiece(c, col[j], LANE_W / 2, y, j === 0 ? 31 : 28);
+    drawPiece(c, col[j], LANE_W / 2, y, j === 0 ? 31 : tight ? 25 : 28);
     c.globalAlpha = 1;
   }
 }
@@ -501,6 +519,7 @@ function layout() {
   dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   cv.width = Math.round(size * dpr); cv.height = Math.round(size * dpr);
   scale = cv.width / V;
+  traySig = '';   // column heights may have changed: redraw the stacks
   buildStatic();
 }
 
@@ -1039,20 +1058,24 @@ function drawCustomer(c, cu, now) {
   else { c.beginPath(); c.arc(fx, fy + 7, 4, Math.PI * 0.2, Math.PI * 0.8); c.stroke(); }
   if (happy || eating) { c.fillStyle = 'rgba(240,110,110,.35)'; for (const s of [-1, 1]) { c.beginPath(); c.ellipse(fx + s * 12, fy + 8, 3.5, 2.2, 0, 0, TAU); c.fill(); } }
   // order chip
-  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 84 : 72, x0 = cx - w / 2;
-  const ck = Math.min(1.3, Math.max(1, 440 / (V * scale / dpr)));
+  const cx = st.chx, cy = st.chy, multi = waiting && cu.order.length > 1, w = multi ? 94 : 82, x0 = cx - w / 2;
+  // bigger on small boards; never wider than the space between seats
+  const ck = Math.min(108 / w, 1.3, Math.max(1, 440 / (V * scale / dpr)));
   c.translate(cx, cy); c.scale(ck, ck); c.translate(-cx, -cy);
-  rr(c, x0, cy - 16, w, 32, 16); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
+  rr(c, x0, cy - 20, w, 40, 20); c.fillStyle = cu.wild ? '#fff1d6' : '#fffaf0'; c.fill();
   c.strokeStyle = cu.wild ? '#e0532f' : 'rgba(42,29,20,.18)'; c.lineWidth = cu.wild ? 2 : 1.2; c.stroke();
   c.textAlign = 'center'; c.textBaseline = 'middle';
   if (waiting) {
     const cur = cu.order[0];
-    if (cur.type < 0) drawWildPlate(c, x0 + 19, cy, 13); else drawPlate(c, cur.type, x0 + 19, cy, 13, false);
-    c.fillStyle = '#2a1d14'; c.font = '600 20px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + (multi ? 45 : 49), cy + 1);
+    // the wanted sushi itself, large, without a plate
+    const sx = x0 + (multi ? 23 : 25);
+    if (cur.type < 0) drawWildPlate(c, sx, cy, 16);
+    else { c.save(); c.translate(sx, cy + 1); c.scale(0.8, 0.8); SUSHI[cur.type](c); c.restore(); }
+    c.fillStyle = '#2a1d14'; c.font = '600 22px Mitr, sans-serif'; c.fillText('×' + cur.count, x0 + (multi ? 55 : 60), cy + 1);
     if (multi) {
-      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 61, cy);
-      drawPlate(c, cu.order[1].type, x0 + 73, cy, 8.5, false);
-      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 81, cy - 11); }
+      c.fillStyle = 'rgba(42,29,20,.4)'; c.font = '500 14px Mitr, sans-serif'; c.fillText('›', x0 + 72, cy);
+      drawPlate(c, cu.order[1].type, x0 + 83, cy, 8.5, false);
+      if (cu.order.length > 2) { c.fillStyle = '#2a1d14'; c.font = '600 10px Mitr, sans-serif'; c.fillText('+1', x0 + 90, cy - 13); }
     }
   } else {
     c.font = '600 17px Mitr, sans-serif'; c.fillStyle = '#3f8f4f';
@@ -1210,7 +1233,7 @@ function frame(now) {
 // Each player owns one document, scores/<their id>, holding their best run.
 // SCORE_URL: the Apps Script Web app URL of the leaderboard sheet (see leaderboard/SETUP.md). Empty = no online board.
 const SCORE_URL = 'https://script.google.com/macros/s/AKfycbyC1GFdwOMSlnmnqwqeo4xbgH42nrXRZwrYBbcBKoW0pAAXitUSYQoC5I0MUAAJQNujmw/exec';
-const NAME_KEY = 'sushibelt-name', LOCAL_BOARD_KEY = 'sushibelt-board', SENT_KEY = 'sushibelt-sent', DEVICE_KEY = 'sushibelt-device', BOARD_CACHE_KEY = 'sushibelt-board-cache';
+const NAME_KEY = 'sushibelt-name', LOCAL_BOARD_KEY = 'sushibelt-board', SENT_KEY = 'sushibelt-sent', DEVICE_KEY = 'sushibelt-device', BOARD_CACHE_KEY = 'sushibelt-board-cache', ACCOUNT_KEY = 'sushibelt-account';
 function deviceId() {
   let id = readLS(DEVICE_KEY, '');
   if (!/^[a-z0-9]{12,40}$/i.test(id)) {
@@ -1271,7 +1294,7 @@ const Board = {
   // An unsent best stays in SENT_KEY's gap and goes out on the next sync (start, clear, back online).
   async sync() {
     const s = playerStats(), name = playerName();
-    if (!s.level) return this.render();
+    if (!s.level || (this.mode === 'remote' && !account())) return this.render();
     const local = readLS(LOCAL_BOARD_KEY, {});
     local[name] = { name, level: s.level, score: s.score };
     writeLS(LOCAL_BOARD_KEY, local);
@@ -1281,7 +1304,7 @@ const Board = {
       this.busy = true;
       try {
         const r = await fetch(SCORE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ id: deviceId(), name: name.slice(0, 16), level: s.level, score: s.score }) });
+          body: JSON.stringify({ id: deviceId(), name: name.slice(0, 16), level: s.level, score: s.score, progress: compactProgress() }) });
         const j = await r.json();
         if (j && j.ok) writeLS(SENT_KEY, { name, level: s.level, score: s.score });
         else if (j && j.retry) setTimeout(() => this.sync(), 9000);
@@ -1388,7 +1411,93 @@ function buildLevelGrid() {
   $('lvInfo').textContent = `ด่าน ${selected}: ลูกค้า ${cfg.target} คน · ` + rules.join(' · ') + ` · ค้างได้ไม่เกิน ${cfg.limit - 2} ชิ้น`;
   $('btnStart').textContent = 'เริ่มด่าน ' + selected;
 }
+const validName = n => !!n && n !== 'เชฟนิรนาม';
+// With the online board, a player signs in once with name + PIN; the browser keeps the account id after that.
+const usesLogin = !!SCORE_URL;
+function account() { const a = readLS(ACCOUNT_KEY, null); return a && a.name ? a : null; }
+const compactProgress = () => { const o = {}; Object.keys(progress).forEach(k => { const p = progress[k]; if (p) o[k] = [p.stars || 0, p.score || 0]; }); return o; };
+function renderAccount() {
+  const a = usesLogin ? account() : null;
+  $('loginBox').hidden = !!a; $('acctBox').hidden = !a;
+  $('pinRow').hidden = $('pinHint').hidden = !usesLogin;
+  if (a) $('acctName').textContent = a.name;
+}
+function showNameErr(msg, field) {
+  $('nameErr').textContent = msg; $('nameErr').hidden = false;
+  ['pname', 'ppin'].forEach(i => $(i).classList.toggle('bad', i === field));
+  $('ovStart').hidden = false; ['ovResult', 'ovPause', 'ovIntro'].forEach(id => $(id).hidden = true);
+  const el = $(field || 'nameErr'); el.scrollIntoView({ block: 'center' }); if (field) el.focus();
+  return false;
+}
+function clearNameErr() { $('nameErr').hidden = true; ['pname', 'ppin'].forEach(i => $(i).classList.remove('bad')); }
+function saveName() {
+  const v = $('pname').value.trim().slice(0, 16);
+  if (v !== (readLS(NAME_KEY, '') || '')) { writeLS(NAME_KEY, v); Board.sync(); }
+  return v;
+}
+const LOGIN_ERR = {
+  pin: 'PIN ไม่ถูกต้อง', locked: 'ใส่ PIN ผิดหลายครั้ง รอ 10 นาทีแล้วลองใหม่',
+  taken: 'ชื่อนี้มีคนใช้แล้ว ถ้าเป็นชื่อของคุณ ให้เปิดเกมจากที่ที่เคยเล่นชื่อนี้ แล้วตั้ง PIN ที่นั่นก่อน',
+  'bad name': 'ตั้งชื่ออื่นที่ไม่ใช่ "เชฟนิรนาม"', 'bad pin': 'PIN ต้องเป็นตัวเลข 4 หลัก',
+};
+let loggingIn = false;
+async function login() {
+  const name = $('pname').value.trim().slice(0, 16), pin = $('ppin').value.trim();
+  if (!validName(name)) return showNameErr('ตั้งชื่อก่อนเริ่มเล่น ชื่อนี้จะขึ้นในตารางอันดับ', 'pname');
+  if (!/^\d{4}$/.test(pin)) return showNameErr('ตั้ง PIN เป็นตัวเลข 4 หลัก (ไว้ใช้เข้าเล่นจากเครื่องอื่น)', 'ppin');
+  loggingIn = true; clearNameErr();
+  $('btnStart').disabled = true; $('btnStart').textContent = 'กำลังเข้าสู่ระบบ…';
+  try {
+    const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 15000);
+    const r = await fetch(SCORE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, signal: ctl.signal,
+      body: JSON.stringify({ action: 'login', name, pin, id: deviceId(), progress: compactProgress() }) });
+    clearTimeout(tm);
+    const j = await r.json();
+    if (!j || !j.ok || !j.id) {
+      const err = j && j.err, msg = LOGIN_ERR[err] || 'ระบบตารางอันดับยังไม่พร้อม ลองใหม่อีกครั้งภายหลัง';
+      return showNameErr(err === 'pin' && j.left > 0 ? `${msg} (ลองได้อีก ${j.left} ครั้ง)` : msg, err === 'taken' || err === 'bad name' ? 'pname' : 'ppin');
+    }
+    writeLS(DEVICE_KEY, j.id); writeLS(NAME_KEY, j.name); writeLS(ACCOUNT_KEY, { name: j.name }); writeLS(SENT_KEY, null);
+    // levels and stars this account earned anywhere come back here
+    Object.keys(j.progress || {}).forEach(k => {
+      const e = j.progress[k], p = progress[k] || { stars: 0, score: 0 };
+      progress[k] = { stars: Math.max(p.stars || 0, +e[0] || 0), score: Math.max(p.score || 0, +e[1] || 0) };
+    });
+    try { localStorage.setItem('sushibelt-levels-v2', JSON.stringify(progress)); } catch (e) {}
+    Board.myId = j.id; $('ppin').value = ''; $('pname').value = j.name;
+    renderAccount(); buildLevelGrid();
+    showToast(j.back ? `ยินดีต้อนรับกลับ ${j.name}` : `สวัสดี ${j.name} · เครื่องนี้จำชื่อไว้แล้ว`, 2400);
+    Board.sync();
+    return j.back ? 'back' : 'new';
+  } catch (e) {
+    return showNameErr('ต่ออินเทอร์เน็ตก่อน (ใช้แค่ตอนเข้าครั้งแรก)', null);
+  } finally {
+    loggingIn = false; $('btnStart').disabled = false; $('btnStart').textContent = 'เริ่มด่าน ' + selected;
+  }
+}
+async function signOut() {
+  const a = account(); if (!a) return;
+  const unsent = () => { const st = playerStats(), sn = readLS(SENT_KEY, null); return st.level && (!sn || sn.level !== st.level || sn.score !== st.score); };
+  if (unsent()) { showToast('กำลังบันทึกคะแนนล่าสุด…', 1500); await Board.sync(); }
+  if (unsent()) { showToast('ต่ออินเทอร์เน็ตก่อน เพื่อบันทึกคะแนนล่าสุด', 2600); return; }
+  if (!confirm(`ออกจากชื่อ ${a.name}?\nด่านและคะแนนบันทึกออนไลน์แล้ว กลับมาใส่ชื่อและ PIN เดิมได้ทุกเมื่อ`)) return;
+  [ACCOUNT_KEY, NAME_KEY, DEVICE_KEY, SENT_KEY, BOARD_CACHE_KEY, LOCAL_BOARD_KEY, 'sushibelt-levels-v2'].forEach(k => { try { localStorage.removeItem(k); } catch (e) {} });
+  progress = {}; selected = 1;
+  Board.myId = deviceId(); Board.me = null;
+  $('pname').value = ''; $('ppin').value = ''; clearNameErr();
+  renderAccount(); buildLevelGrid(); Board.refresh();
+}
 function start(n = selected) {
+  if (usesLogin) {
+    if (!account()) {
+      // first visit on this browser: sign in, then go (a returning player first sees their levels)
+      if (!loggingIn) login().then(r => { if (r === 'new') start(n); });
+      return;
+    }
+  } else if (!validName(saveName())) {
+    return showNameErr('ตั้งชื่อก่อนเริ่มเล่น ชื่อนี้จะขึ้นในตารางอันดับ', 'pname');
+  }
+  clearNameErr();
   selected = n;
   ['ovStart', 'ovResult', 'ovPause', 'ovIntro'].forEach(id => $(id).hidden = true);
   const intro = INTROS[n];
@@ -1418,14 +1527,20 @@ $('btnBoard').addEventListener('click', openBoard);
 $('btnBoard2').addEventListener('click', openBoard);
 $('btnBoardClose').addEventListener('click', () => { $('ovBoard').hidden = true; });
 $('pname').value = readLS(NAME_KEY, '') || '';
-$('pname').addEventListener('change', () => { writeLS(NAME_KEY, $('pname').value.trim().slice(0, 16)); Board.sync(); });
+$('pname').addEventListener('change', () => { if (!usesLogin) saveName(); });
+['pname', 'ppin'].forEach(i => $(i).addEventListener('input', () => { if ($(i).value.trim()) clearNameErr(); }));
+$('ppin').addEventListener('input', () => { const v = $('ppin').value.replace(/\D/g, '').slice(0, 4); if (v !== $('ppin').value) $('ppin').value = v; });
+$('pname').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); if (usesLogin) $('ppin').focus(); else { $('pname').blur(); start(); } } });
+$('ppin').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('ppin').blur(); start(); } });
+$('btnSwitch').addEventListener('click', signOut);
+renderAccount();
 $('btnQuit').addEventListener('click', toMenu);
 $('btnResume').addEventListener('click', resume);
 $('btnPause').addEventListener('click', () => running ? pause() : resume());
 $('btnFast').addEventListener('click', () => setFast(!fast));
 $('btnHint').addEventListener('click', useHelper);
 document.addEventListener('keydown', e => {
-  if (e.repeat) return;
+  if (e.repeat || (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))) return;
   const dig = /^Digit([1-5])$/.exec(e.code);
   if (dig) { e.preventDefault(); tapLane(+dig[1] - 1); }
   else if (e.key === 'f' || e.key === 'F') setFast(!fast);
